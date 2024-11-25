@@ -12,7 +12,7 @@ var physicsObjects = [];
 
 //TODO use classes ! 
 function addPhysicsObject(theObject){
-    theObject.mass = theObject.sideHalfEdges[0] * theObject.sideHalfEdges[1];
+    theObject.invMass = theObject.invDensity / (theObject.sideHalfEdges[0] * theObject.sideHalfEdges[1]);
     physicsObjects.push(theObject);
 }
 
@@ -20,19 +20,29 @@ addPhysicsObject({
     position: [200,100],
     velocity: [0.3,1],
     sideHalfEdges: [20,30],
-    cor: 0.6
+    cor: 0.6,
+    invDensity: 1
 });
 addPhysicsObject({
     position: [210,30],
     velocity: [0.3,1],
     sideHalfEdges: [20,25],
-    cor: 0.6
+    cor: 0.6,
+    invDensity: 1
 });
 addPhysicsObject({
     position: [100,100],
     velocity: [0,0],
-    sideHalfEdges: [20,10],
-    cor: 0.6
+    sideHalfEdges: [10,10],
+    cor: 0.6,
+    invDensity:1
+});
+addPhysicsObject({
+    position: [300,300],
+    velocity: [0,0],
+    sideHalfEdges: [40,40],
+    cor: 0.6,
+    invDensity: 0
 });
 
 function processPossibleCollision(object1, object2){
@@ -62,16 +72,18 @@ function processPossibleCollision(object1, object2){
         //is colliding
 
         if (separation[0]>separation[1]){
+            //momentum = m1v1 + m1v2. centre of mass speed = (m1v1+m2v2)/(m1+m2)
+            // = (v1/m2 + v2/m1)/(1/m1 + 1/m2)
             if (positionDifference[0]*velocityDifference[0]<0){
-                var tmp =  object1.velocity[0];
-                object1.velocity[0] = object2.velocity[0];
-                object2.velocity[0] = tmp;
+                var cOfMSpeed = (object1.velocity[0]*object2.invMass + object2.velocity[0]*object1.invMass)/(object1.invMass+ object2.invMass);
+                object1.velocity[0] = 2* cOfMSpeed - object1.velocity[0];
+                object2.velocity[0] = 2* cOfMSpeed - object2.velocity[0];
             }
         }else{
             if (positionDifference[1]*velocityDifference[1]<0){
-                var tmp =  object1.velocity[1];
-                object1.velocity[1] = object2.velocity[1];
-                object2.velocity[1] = tmp;
+                var cOfMSpeed = (object1.velocity[1]*object2.invMass + object2.velocity[1]*object1.invMass)/(object1.invMass+ object2.invMass);
+                object1.velocity[1] = 2* cOfMSpeed - object1.velocity[1];
+                object2.velocity[1] = 2* cOfMSpeed - object2.velocity[1];
             }
         }
 
@@ -137,7 +149,9 @@ function updateAndRender(timestamp){
 
         //apply gravity. 
         physicsObjects.forEach((x) => {
-            x.velocity[1]+=0.01;
+            if (x.invDensity!=0){
+                x.velocity[1]+=0.01;
+            }
         });
     }
     
