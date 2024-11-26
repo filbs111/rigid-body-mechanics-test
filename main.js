@@ -21,28 +21,32 @@ addPhysicsObject({
     velocity: [0.3,1],
     sideHalfEdges: [20,30],
     cor: 0.6,
-    invDensity: 1
+    invDensity: 1,
+    fillStyle: "red"
 });
 addPhysicsObject({
     position: [210,30],
     velocity: [0.3,1],
     sideHalfEdges: [20,25],
     cor: 0.6,
-    invDensity: 1
+    invDensity: 1,
+    fillStyle: "green"
 });
 addPhysicsObject({
     position: [100,100],
     velocity: [0,0],
     sideHalfEdges: [10,10],
     cor: 0.6,
-    invDensity:1
+    invDensity:1,
+    fillStyle: "magenta"
 });
 addPhysicsObject({
     position: [300,300],
     velocity: [0,0],
     sideHalfEdges: [40,40],
     cor: 0.6,
-    invDensity: 0
+    invDensity: 0,
+    fillStyle: "black"
 });
 
 function processPossibleCollision(object1, object2){
@@ -159,6 +163,7 @@ function updateAndRender(timestamp){
     //update display
     ctx.clearRect(0, 0, 500, 500);
     physicsObjects.forEach((x) => {
+        ctx.fillStyle = x.fillStyle;
         ctx.fillRect(
             x.position[0] - x.sideHalfEdges[0],
             x.position[1] - x.sideHalfEdges[1],
