@@ -70,20 +70,21 @@ function processPossibleCollision(object1, object2){
 
     if (separation[0]<0 && separation[1]<0){
         //is colliding
+        var effectiveCorR = Math.min(object1.cor, object2.cor); //TODO does this make sense?
 
         if (separation[0]>separation[1]){
             //momentum = m1v1 + m1v2. centre of mass speed = (m1v1+m2v2)/(m1+m2)
             // = (v1/m2 + v2/m1)/(1/m1 + 1/m2)
             if (positionDifference[0]*velocityDifference[0]<0){
                 var cOfMSpeed = (object1.velocity[0]*object2.invMass + object2.velocity[0]*object1.invMass)/(object1.invMass+ object2.invMass);
-                object1.velocity[0] = 2* cOfMSpeed - object1.velocity[0];
-                object2.velocity[0] = 2* cOfMSpeed - object2.velocity[0];
+                object1.velocity[0] = (1+effectiveCorR)* cOfMSpeed - effectiveCorR*object1.velocity[0];
+                object2.velocity[0] = (1+effectiveCorR)* cOfMSpeed - effectiveCorR*object2.velocity[0];
             }
         }else{
             if (positionDifference[1]*velocityDifference[1]<0){
                 var cOfMSpeed = (object1.velocity[1]*object2.invMass + object2.velocity[1]*object1.invMass)/(object1.invMass+ object2.invMass);
-                object1.velocity[1] = 2* cOfMSpeed - object1.velocity[1];
-                object2.velocity[1] = 2* cOfMSpeed - object2.velocity[1];
+                object1.velocity[1] = (1+effectiveCorR)* cOfMSpeed - effectiveCorR*object1.velocity[1];
+                object2.velocity[1] = (1+effectiveCorR)* cOfMSpeed - effectiveCorR*object2.velocity[1];
             }
         }
 
