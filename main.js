@@ -12,13 +12,15 @@ var physicsObjects = [];
 
 //TODO use classes ! 
 function addPhysicsObject(theObject){
-    theObject.invMass = theObject.invDensity / (theObject.sideHalfEdges[0] * theObject.sideHalfEdges[1]);
+    var objArea = theObject.objType == "rect" ? (theObject.sideHalfEdges[0] * theObject.sideHalfEdges[1]) : Math.PI * theObject.radius * theObject.radius;
+    theObject.invMass = theObject.invDensity / objArea;
     physicsObjects.push(theObject);
 }
 
 addPhysicsObject({
     position: [200,100],
     velocity: [0.3,1],
+    objType: "rect",
     sideHalfEdges: [20,30],
     cor: 0.6,
     invDensity: 1,
@@ -27,6 +29,7 @@ addPhysicsObject({
 addPhysicsObject({
     position: [210,30],
     velocity: [0.3,1],
+    objType: "rect",
     sideHalfEdges: [20,25],
     cor: 0.6,
     invDensity: 1,
@@ -35,6 +38,7 @@ addPhysicsObject({
 addPhysicsObject({
     position: [100,100],
     velocity: [0,0],
+    objType: "rect",
     sideHalfEdges: [10,10],
     cor: 0.6,
     invDensity:1,
@@ -43,13 +47,29 @@ addPhysicsObject({
 addPhysicsObject({
     position: [300,300],
     velocity: [0,0],
+    objType: "rect",
     sideHalfEdges: [40,40],
     cor: 0.6,
     invDensity: 0,
     fillStyle: "black"
 });
+addPhysicsObject({
+    position: [350,300],
+    velocity: [-1,0],
+    objType: "circle",
+    radius: 40,
+    cor: 0.6,
+    invDensity: 1,
+    fillStyle: "blue"
+});
 
 function processPossibleCollision(object1, object2){
+
+    //temp -no collision for circles yet
+    if ( (object1.objType == "circle") || (object2.objType == "circle")){
+        return;
+    }
+
     var totalHalfLengths = [
         object1.sideHalfEdges[0] + object2.sideHalfEdges[0], 
         object1.sideHalfEdges[1] + object2.sideHalfEdges[1]
@@ -110,7 +130,7 @@ function updateAndRender(timestamp){
 
     var timeDifference = timestamp - currentTime;
     currentTime = timestamp;
-    console.log("elapsed time: " + timeDifference);
+    //console.log("elapsed time: " + timeDifference);
 
     physTimeToCatchUp += timeDifference;
 
@@ -126,22 +146,47 @@ function updateAndRender(timestamp){
 
         //collide with level box.
         physicsObjects.forEach((x) => {
-            if (x.position[0]< x.sideHalfEdges[0] && x.velocity[0] <0 ){
-                x.position[0]= x.sideHalfEdges[0];
-                x.velocity[0]=-x.velocity[0]*x.cor;
+
+            if (x.objType == "rect"){
+                //select collision method using if. this could be neater - could have a collision 
+                // method defined for each object type (interface, implementation...)
+
+                if (x.position[0]< x.sideHalfEdges[0] && x.velocity[0] <0 ){
+                    x.position[0]= x.sideHalfEdges[0];
+                    x.velocity[0]=-x.velocity[0]*x.cor;
+                }
+                if (x.position[1] < x.sideHalfEdges[1] && x.velocity[1] <0 ){
+                    x.position[1]= x.sideHalfEdges[1];
+                    x.velocity[1]=-x.velocity[1]*x.cor;
+                }
+                if (x.position[0]> 500 -x.sideHalfEdges[0] && x.velocity[0] >0 ){
+                    x.position[0]= 500 -x.sideHalfEdges[0];
+                    x.velocity[0]= -x.velocity[0]*x.cor;
+                }
+                if (x.position[1]> 500 -x.sideHalfEdges[1] && x.velocity[1] >0 ){
+                    x.position[1]= 500 -x.sideHalfEdges[1];
+                    x.velocity[1]= -x.velocity[1]*x.cor;
+                }
+            }else if (x.objType == "circle"){
+                if (x.position[0]< x.radius && x.velocity[0] <0 ){
+                    x.position[0]= x.radius;
+                    x.velocity[0]=-x.velocity[0]*x.cor;
+                }
+                if (x.position[1] < x.radius && x.velocity[1] <0 ){
+                    x.position[1]= x.radius;
+                    x.velocity[1]=-x.velocity[1]*x.cor;
+                }
+                if (x.position[0]> 500 -x.radius && x.velocity[0] >0 ){
+                    x.position[0]= 500 -x.radius;
+                    x.velocity[0]= -x.velocity[0]*x.cor;
+                }
+                if (x.position[1]> 500 -x.radius && x.velocity[1] >0 ){
+                    x.position[1]= 500 -x.radius;
+                    x.velocity[1]= -x.velocity[1]*x.cor;
+                }
             }
-            if (x.position[1] < x.sideHalfEdges[1] && x.velocity[1] <0 ){
-                x.position[1]= x.sideHalfEdges[1];
-                x.velocity[1]=-x.velocity[1]*x.cor;
-            }
-            if (x.position[0]> 500 -x.sideHalfEdges[0] && x.velocity[0] >0 ){
-                x.position[0]= 500 -x.sideHalfEdges[0];
-                x.velocity[0]= -x.velocity[0]*x.cor;
-            }
-            if (x.position[1]> 500 -x.sideHalfEdges[1] && x.velocity[1] >0 ){
-                x.position[1]= 500 -x.sideHalfEdges[1];
-                x.velocity[1]= -x.velocity[1]*x.cor;
-            }
+
+            
         });
 
         //collide with other objects
@@ -164,12 +209,20 @@ function updateAndRender(timestamp){
     ctx.clearRect(0, 0, 500, 500);
     physicsObjects.forEach((x) => {
         ctx.fillStyle = x.fillStyle;
-        ctx.fillRect(
-            x.position[0] - x.sideHalfEdges[0],
-            x.position[1] - x.sideHalfEdges[1],
-            2*x.sideHalfEdges[0],
-            2*x.sideHalfEdges[1]
-            );
+
+        //TODO render method per object.
+        if (x.objType == "rect"){
+            ctx.fillRect(
+                x.position[0] - x.sideHalfEdges[0],
+                x.position[1] - x.sideHalfEdges[1],
+                2*x.sideHalfEdges[0],
+                2*x.sideHalfEdges[1]
+                );
+        }else if (x.objType == "circle"){
+            ctx.beginPath();
+            ctx.arc(x.position[0], x.position[1], x.radius, 0, 2 * Math.PI);
+            ctx.fill();
+        }
     });
 }
 
