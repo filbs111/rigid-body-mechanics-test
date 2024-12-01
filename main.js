@@ -222,11 +222,8 @@ function processPossibleCollisionCircleRectangle(circle, rect){
                 pointOnCircle[1] * positionSigns[1]
             ];
 
-            doCollision(signedPointOnCircle.map(x=>-x));
-                //NOTE this isn't actually amount to separate, so if start actually moving objects apart (rather than just changing speed),
-                //should get this right. something like the below...
-
-            /*
+            //doCollision(signedPointOnCircle.map(x=>-x));
+              
             var rad = signedPointOnCircle[0]*signedPointOnCircle[0] + signedPointOnCircle[1]*signedPointOnCircle[1];
             rad = Math.sqrt(rad);
             var signedPointOnCircleWithCircleRadius = signedPointOnCircle.map(x=> x*circle.radius/rad);
@@ -235,20 +232,25 @@ function processPossibleCollisionCircleRectangle(circle, rect){
                 -signedPointOnCircleWithCircleRadius[1] + signedPointOnCircle[1]
             ];
             doCollision(vectorToSeparate);
-            */
+            
         }  //else is not colliding
     }
 
     function doCollision(pentetrationVector){
-        //move shapes apart by this vector
-        //TODO...
-
-        //impart impulse along this direction
-      
+        
         var dotVecWithPenVec = velocityDifference[0]*pentetrationVector[0] + velocityDifference[1]*pentetrationVector[1];
         if (dotVecWithPenVec<0){return;}
         
-        
+        //move shapes apart by this vector
+        //TODO...
+        var totalInvMass = object1.invMass + object2.invMass;
+        object1.position[0] -= object1.invMass/totalInvMass * pentetrationVector[0];
+        object1.position[1] -= object1.invMass/totalInvMass * pentetrationVector[1];
+        object2.position[0] += object2.invMass/totalInvMass * pentetrationVector[0];
+        object2.position[1] += object2.invMass/totalInvMass * pentetrationVector[1];
+
+
+        //impart impulse along this direction
         var separationSq = pentetrationVector[0]*pentetrationVector[0] + pentetrationVector[1]*pentetrationVector[1];
 
         var cOfMVelocity = [
