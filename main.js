@@ -314,6 +314,7 @@ function processPossibleCollisionRectRect(object1, object2){
     if (separation[0]<0 && separation[1]<0){
         //is colliding
         var cor = effectiveCor(object1, object2);
+        var totalInvMass = object1.invMass + object2.invMass;
 
         if (separation[0]>separation[1]){
             //momentum = m1v1 + m1v2. centre of mass speed = (m1v1+m2v2)/(m1+m2)
@@ -322,6 +323,15 @@ function processPossibleCollisionRectRect(object1, object2){
                 var cOfMSpeed = (object1.velocity[0]*object2.invMass + object2.velocity[0]*object1.invMass)/(object1.invMass+ object2.invMass);
                 object1.velocity[0] = (1+cor)* cOfMSpeed - cor*object1.velocity[0];
                 object2.velocity[0] = (1+cor)* cOfMSpeed - cor*object2.velocity[0];
+
+                //move objects apart
+                if (positionDifference[0]>0){
+                    object1.position[0]-= separation[0] * object1.invMass/totalInvMass;
+                    object2.position[0]+= separation[0] * object2.invMass/totalInvMass;
+                }else{
+                    object1.position[0]+= separation[0] * object1.invMass/totalInvMass;
+                    object2.position[0]-= separation[0] * object2.invMass/totalInvMass;
+                }
             }
         }else{
             if (positionDifference[1]*velocityDifference[1]<0){
@@ -329,6 +339,17 @@ function processPossibleCollisionRectRect(object1, object2){
                 object1.velocity[1] = (1+cor)* cOfMSpeed - cor*object1.velocity[1];
                 object2.velocity[1] = (1+cor)* cOfMSpeed - cor*object2.velocity[1];
             }
+
+             //move objects apart
+             if (positionDifference[1]>0){
+                object1.position[1]-= separation[1] * object1.invMass/totalInvMass;
+                object2.position[1]+= separation[1] * object2.invMass/totalInvMass;
+            }else{
+                object1.position[1]+= separation[1] * object1.invMass/totalInvMass;
+                object2.position[1]-= separation[1] * object2.invMass/totalInvMass;
+            }
+
+
         }
 
     }
