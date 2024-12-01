@@ -127,6 +127,8 @@ function processPossibleCollisionCircleCircle(object1, object2){
                 //add the centre of mass velocity back.
                 //TODO reformulate for efficiency? (removal of square roots etc)
 
+                //TODO move objects apart!
+
             updateSpeedForObject(object1);
             updateSpeedForObject(object2);
 
@@ -158,17 +160,11 @@ function processPossibleCollisionCircleCircle(object1, object2){
     }
 }
 
-function processPossibleCollision(object1, object2){
+function processPossibleCollisionCircleRectangle(rect, circle){
 
-    if ( (object1.objType == "circle") && (object2.objType == "circle")){
-        return processPossibleCollisionCircleCircle(object1, object2);
-    }
+}
 
-    //temp -no collision for circles yet
-    if ( (object1.objType == "circle") || (object2.objType == "circle")){
-        return;
-    }
-
+function processPossibleCollisionRectRect(object1, object2){
     var totalHalfLengths = [
         object1.sideHalfEdges[0] + object2.sideHalfEdges[0], 
         object1.sideHalfEdges[1] + object2.sideHalfEdges[1]
@@ -212,6 +208,23 @@ function processPossibleCollision(object1, object2){
         }
 
     }
+};
+
+
+function processPossibleCollision(object1, object2){
+
+    if ( (object1.objType == "circle") && (object2.objType == "circle")){
+        return processPossibleCollisionCircleCircle(object1, object2);
+    }
+
+    if ( (object1.objType == "circle") && (object2.objType == "rect")){
+        return processPossibleCollisionCircleCircle(object1, object2);
+    }
+    if ( (object1.objType == "circle") && (object2.objType == "rect")){
+        return processPossibleCollisionCircleCircle(object2, object1);
+    }
+
+    processPossibleCollisionRectRect(object1, object2);
 }
 
 
