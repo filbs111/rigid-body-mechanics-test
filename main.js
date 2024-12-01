@@ -54,6 +54,18 @@ addPhysicsObject({
     fillStyle: "black"
 });
 
+for (var ii=0;ii<10;ii++){
+    addPhysicsObject({
+        position: [50,20+30*ii],
+        velocity: [0,0],
+        objType: "rect",
+        sideHalfEdges: [20,20],
+        cor: 0.6,
+        invDensity: 1,
+        fillStyle: `rgba(32, 45, ${ii*25}, 255)`
+    });
+}
+
 //CIRCLES
 addPhysicsObject({
     position: [400,50],
