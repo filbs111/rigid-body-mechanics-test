@@ -82,6 +82,15 @@ addPhysicsObject({
     invDensity: 1,
     fillStyle: "orange"
 });
+addPhysicsObject({
+    position: [450,50],
+    velocity: [-0.5,0],
+    objType: "circle",
+    radius: 10,
+    cor: 0.6,
+    invDensity: 1,
+    fillStyle: "brown"
+});
 
 function effectiveCor(object1, object2){
     return Math.min(object1.cor, object2.cor); //TODO does this make sense?
@@ -160,8 +169,111 @@ function processPossibleCollisionCircleCircle(object1, object2){
     }
 }
 
-function processPossibleCollisionCircleRectangle(rect, circle){
+function processPossibleCollisionCircleRectangle(circle, rect){
 
+    var object1 = rect;
+    var object2 = circle;
+    var cor = effectiveCor(object1, object2);
+
+    var positionDifference = [
+        object1.position[0] - object2.position[0],
+        object1.position[1] - object2.position[1]
+    ];
+    var positionSigns = positionDifference.map(x=> x/(Math.abs(x)+0.0000000001));  //NOTE hack to handle zeros
+
+    var velocityDifference = [
+        object1.velocity[0] - object2.velocity[0],
+        object1.velocity[1] - object2.velocity[1]
+    ];
+
+    //calculate penetration vector / vector of minimum movement to separate shapes
+    var absPosDifference = positionDifference.map(Math.abs);
+    var penForAxes = [
+        absPosDifference[0] - rect.sideHalfEdges[0],
+        absPosDifference[1] - rect.sideHalfEdges[1],
+    ];
+
+    if (penForAxes[0]<0 && penForAxes[1]<0){    //deeper than circle radius (colliding)
+        if (penForAxes[0]<penForAxes[1]){
+            doCollision([0, penForAxes[1]*positionSigns[1]]); //comment to debug more common case (ensure this doesn't happen)
+        }else{
+            doCollision([penForAxes[0]*positionSigns[0], 0]);
+        }
+    }else{
+        var pointOnCircle = penForAxes.map(x=>Math.max(x,0));
+        var radSq = pointOnCircle[0]*pointOnCircle[0] + pointOnCircle[1]*pointOnCircle[1];
+        if (radSq < circle.radius * circle.radius){
+            //colliding. penetration/move apart vector is pointOnCircle, with signs from positionDifference.
+
+            var signedPointOnCircle = [
+                pointOnCircle[0] * positionSigns[0], 
+                pointOnCircle[1] * positionSigns[1]
+            ];
+
+            doCollision(signedPointOnCircle.map(x=>-x));
+                //NOTE this isn't actually amount to separate, so if start actually moving objects apart (rather than just changing speed),
+                //should get this right. something like the below...
+
+            /*
+            var rad = signedPointOnCircle[0]*signedPointOnCircle[0] + signedPointOnCircle[1]*signedPointOnCircle[1];
+            rad = Math.sqrt(rad);
+            var signedPointOnCircleWithCircleRadius = signedPointOnCircle.map(x=> x*circle.radius/rad);
+            var vectorToSeparate = [
+                -signedPointOnCircleWithCircleRadius[0] + signedPointOnCircle[0],
+                -signedPointOnCircleWithCircleRadius[1] + signedPointOnCircle[1]
+            ];
+            doCollision(vectorToSeparate);
+            */
+        }  //else is not colliding
+    }
+
+    function doCollision(pentetrationVector){
+        //move shapes apart by this vector
+        //TODO...
+
+        //impart impulse along this direction
+      
+        var dotVecWithPenVec = velocityDifference[0]*pentetrationVector[0] + velocityDifference[1]*pentetrationVector[1];
+        if (dotVecWithPenVec<0){return;}
+        
+        
+        var separationSq = pentetrationVector[0]*pentetrationVector[0] + pentetrationVector[1]*pentetrationVector[1];
+
+        var cOfMVelocity = [
+            (object1.velocity[0]*object2.invMass + object2.velocity[0]*object1.invMass)/(object1.invMass+ object2.invMass),
+            (object1.velocity[1]*object2.invMass + object2.velocity[1]*object1.invMass)/(object1.invMass+ object2.invMass)
+            ];
+            
+        //NOTE This is a copy paste from circle-circle collision. positionDifference is swapped out for pentetrationVector. TODO dedupe!
+
+        updateSpeedForObject(object1);
+        updateSpeedForObject(object2);
+
+        function updateSpeedForObject(theObject){
+            var velInMovingFrame = [
+                theObject.velocity[0]- cOfMVelocity[0],
+                theObject.velocity[1]- cOfMVelocity[1]
+            ];
+
+            var mulltiplier1 = (velInMovingFrame[0]*pentetrationVector[0] + velInMovingFrame[1]*pentetrationVector[1])
+                    /separationSq;
+
+            var velInMovingFrameComponentAlongReactionNormal = 
+                [pentetrationVector[0]*mulltiplier1, pentetrationVector[1]*mulltiplier1];
+
+            var perpendicularPart = [
+                velInMovingFrame[0] - velInMovingFrameComponentAlongReactionNormal[0],
+                velInMovingFrame[1] - velInMovingFrameComponentAlongReactionNormal[1],
+            ];
+
+            //TODO formulate using impulses instead?
+            theObject.velocity = [
+                cOfMVelocity[0] + perpendicularPart[0] - cor * velInMovingFrameComponentAlongReactionNormal[0],
+                cOfMVelocity[1] + perpendicularPart[1] - cor * velInMovingFrameComponentAlongReactionNormal[1],
+            ];
+        }
+
+    }
 }
 
 function processPossibleCollisionRectRect(object1, object2){
@@ -218,10 +330,10 @@ function processPossibleCollision(object1, object2){
     }
 
     if ( (object1.objType == "circle") && (object2.objType == "rect")){
-        return processPossibleCollisionCircleCircle(object1, object2);
+        return processPossibleCollisionCircleRectangle(object1, object2);
     }
-    if ( (object1.objType == "circle") && (object2.objType == "rect")){
-        return processPossibleCollisionCircleCircle(object2, object1);
+    if ( (object2.objType == "circle") && (object1.objType == "rect")){
+        return processPossibleCollisionCircleRectangle(object2, object1);
     }
 
     processPossibleCollisionRectRect(object1, object2);
