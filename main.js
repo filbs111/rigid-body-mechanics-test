@@ -8,6 +8,7 @@ var currentTime = null;
 var physStepTime = 3;   //phys step every 3 ms.
 var physTimeToCatchUp = 0;
 var maxIterationsPerDraw = 10;
+var friction_mu = 0.2;   //coefficient of friction. for now just have same for all object (pairs), and static, sliding friction same
 
 var physicsObjects = [];
 
@@ -49,7 +50,7 @@ addPhysicsObject({
     position: [300,300],
     velocity: [0,0],
     objType: "rect",
-    sideHalfEdges: [40,40],
+    sideHalfEdges: [160,25],
     cor: 0.6,
     invDensity: 0,
     fillStyle: "black"
@@ -59,10 +60,10 @@ for (var ii=0;ii<10;ii++){
     addPhysicsObject({
         position: [50,20+40*ii],
         velocity: [0,0],
-        //objType: "rect",
-        //sideHalfEdges: [20,20],
-        objType: "circle",
-        radius: 15,
+        objType: "rect",
+        sideHalfEdges: [20,20],
+        //objType: "circle",
+        //radius: 15,
         cor: 0.6,
         invDensity: 1,
         fillStyle: `rgba(32, 45, ${ii*25}, 255)`
@@ -332,7 +333,7 @@ function processPossibleCollisionRectRect(object1, object2){
         var cor = effectiveCor(object1, object2);
         var totalInvMass = object1.invMass + object2.invMass;
 
-        if (separation[0]>separation[1]){
+        if (separation[0]>separation[1]){   //vertical surfaces colliding
             //momentum = m1v1 + m1v2. centre of mass speed = (m1v1+m2v2)/(m1+m2)
             // = (v1/m2 + v2/m1)/(1/m1 + 1/m2)
             if (positionDifference[0]*velocityDifference[0]<0){
@@ -348,23 +349,46 @@ function processPossibleCollisionRectRect(object1, object2){
                     object1.position[0]+= separation[0] * object1.invMass/totalInvMass;
                     object2.position[0]-= separation[0] * object2.invMass/totalInvMass;
                 }
+
+
+                //apply friction.
+                //relative velocity change imparted by reaction impulse is:
+                // (1+cor)*velocityDifference[0]
+                // NOTE that using impluses to apply velocity addition for reaction above might make code more readable/consistent
+                // maximum friction impluse that can be applied is friction_mu* above
+                // friction impluse is capped by velocityDifference[1]
+
+                //friction
+                var reactionForceSpeedChange = Math.abs(velocityDifference[0])*(1+cor);
+                var fractionOfLateralSpeedToRemove = Math.min(1, (reactionForceSpeedChange*friction_mu)/Math.abs(velocityDifference[1]));
+                var frictionForceSpeedChange = velocityDifference[1]*fractionOfLateralSpeedToRemove;
+
+                object1.velocity[1]-=frictionForceSpeedChange*object1.invMass/totalInvMass;
+                object2.velocity[1]+=frictionForceSpeedChange*object2.invMass/totalInvMass;
             }
         }else{
             if (positionDifference[1]*velocityDifference[1]<0){
                 var cOfMSpeed = (object1.velocity[1]*object2.invMass + object2.velocity[1]*object1.invMass)/(object1.invMass+ object2.invMass);
                 object1.velocity[1] = (1+cor)* cOfMSpeed - cor*object1.velocity[1];
                 object2.velocity[1] = (1+cor)* cOfMSpeed - cor*object2.velocity[1];
-            }
 
-             //move objects apart
-             if (positionDifference[1]>0){
-                object1.position[1]-= separation[1] * object1.invMass/totalInvMass;
-                object2.position[1]+= separation[1] * object2.invMass/totalInvMass;
-            }else{
-                object1.position[1]+= separation[1] * object1.invMass/totalInvMass;
-                object2.position[1]-= separation[1] * object2.invMass/totalInvMass;
-            }
+                //move objects apart
+                if (positionDifference[1]>0){
+                    object1.position[1]-= separation[1] * object1.invMass/totalInvMass;
+                    object2.position[1]+= separation[1] * object2.invMass/totalInvMass;
+                }else{
+                    object1.position[1]+= separation[1] * object1.invMass/totalInvMass;
+                    object2.position[1]-= separation[1] * object2.invMass/totalInvMass;
+                }
 
+                //friction
+                var reactionForceSpeedChange = Math.abs(velocityDifference[1])*(1+cor);
+                var fractionOfLateralSpeedToRemove = Math.min(1, (reactionForceSpeedChange*friction_mu)/Math.abs(velocityDifference[0]));
+                var frictionForceSpeedChange = velocityDifference[0]*fractionOfLateralSpeedToRemove;
+
+                object1.velocity[0]-=frictionForceSpeedChange*object1.invMass/totalInvMass;
+                object2.velocity[0]+=frictionForceSpeedChange*object2.invMass/totalInvMass;
+            }
 
         }
 
