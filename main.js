@@ -56,10 +56,12 @@ addPhysicsObject({
 
 for (var ii=0;ii<10;ii++){
     addPhysicsObject({
-        position: [50,20+30*ii],
+        position: [50,20+40*ii],
         velocity: [0,0],
-        objType: "rect",
-        sideHalfEdges: [20,20],
+        //objType: "rect",
+        //sideHalfEdges: [20,20],
+        objType: "circle",
+        radius: 15,
         cor: 0.6,
         invDensity: 1,
         fillStyle: `rgba(32, 45, ${ii*25}, 255)`
@@ -242,7 +244,6 @@ function processPossibleCollisionCircleRectangle(circle, rect){
         if (dotVecWithPenVec<0){return;}
         
         //move shapes apart by this vector
-        //TODO...
         var totalInvMass = object1.invMass + object2.invMass;
         object1.position[0] -= object1.invMass/totalInvMass * pentetrationVector[0];
         object1.position[1] -= object1.invMass/totalInvMass * pentetrationVector[1];
