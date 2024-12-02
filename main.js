@@ -7,6 +7,7 @@ var ctx = canvas.getContext("2d");
 var currentTime = null;
 var physStepTime = 3;   //phys step every 3 ms.
 var physTimeToCatchUp = 0;
+var maxIterationsPerDraw = 10;
 
 var physicsObjects = [];
 
@@ -406,9 +407,19 @@ function updateAndRender(timestamp){
 
     physTimeToCatchUp += timeDifference;
 
-    //TODO cap iterations.
-    while (physTimeToCatchUp > 0){
-        physTimeToCatchUp-=physStepTime;
+    var iterationsToCatchUp = Math.floor(physTimeToCatchUp/physStepTime);
+
+    physTimeToCatchUp-=iterationsToCatchUp*physStepTime;
+
+    //cap iterations
+    if (iterationsToCatchUp>maxIterationsPerDraw){
+        iterationsToCatchUp=maxIterationsPerDraw;
+        physTimeToCatchUp=0;
+    }
+    console.log("will do " + iterationsToCatchUp + " iterations" );
+
+    while (iterationsToCatchUp > 0){
+        iterationsToCatchUp-=1;
 
         //move objects
         physicsObjects.forEach((x) => {
