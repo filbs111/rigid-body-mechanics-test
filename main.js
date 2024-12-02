@@ -150,7 +150,19 @@ function processPossibleCollisionCircleCircle(object1, object2){
                 //add the centre of mass velocity back.
                 //TODO reformulate for efficiency? (removal of square roots etc)
 
-                //TODO move objects apart!
+            //move objects apart!
+            //should move distance separation-totalrad 
+            var totalInvMass = object1.invMass + object2.invMass;
+            var currentSeparation = Math.sqrt(separationSq);
+            var scaleUpFactor = (totalRad/currentSeparation) -1;
+            var vecToMoveTotal = positionDifference.map(x=>x*scaleUpFactor);
+
+            object1.position[0]+=(object1.invMass/totalInvMass)*vecToMoveTotal[0];
+            object1.position[1]+=(object1.invMass/totalInvMass)*vecToMoveTotal[1];
+            object2.position[0]-=(object2.invMass/totalInvMass)*vecToMoveTotal[0];
+            object2.position[1]-=(object2.invMass/totalInvMass)*vecToMoveTotal[1];
+
+
 
             updateSpeedForObject(object1);
             updateSpeedForObject(object2);
