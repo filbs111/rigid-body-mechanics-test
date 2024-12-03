@@ -200,7 +200,6 @@ function processPossibleCollisionCircleCircle(object1, object2){
             object2.velocity[0]+=velocityToRemoveInTangentDirection[0]*object2.invMass/totalInvMass;
             object2.velocity[1]+=velocityToRemoveInTangentDirection[1]*object2.invMass/totalInvMass;
 
-
             function updateSpeedForObject(theObject){
                 var velInMovingFrame = [
                     theObject.velocity[0]- cOfMVelocity[0],
@@ -286,9 +285,6 @@ function processPossibleCollisionCircleRectangle(circle, rect){
 
     function doCollision(pentetrationVector){
         
-        var dotVecWithPenVec = velocityDifference[0]*pentetrationVector[0] + velocityDifference[1]*pentetrationVector[1];
-        if (dotVecWithPenVec<0){return;}
-        
         //move shapes apart by this vector
         var totalInvMass = object1.invMass + object2.invMass;
         object1.position[0] -= object1.invMass/totalInvMass * pentetrationVector[0];
@@ -296,6 +292,9 @@ function processPossibleCollisionCircleRectangle(circle, rect){
         object2.position[0] += object2.invMass/totalInvMass * pentetrationVector[0];
         object2.position[1] += object2.invMass/totalInvMass * pentetrationVector[1];
 
+        var dotVecWithPenVec = velocityDifference[0]*pentetrationVector[0] + velocityDifference[1]*pentetrationVector[1];
+        if (dotVecWithPenVec<0){return;}
+        
 
         //impart impulse along this direction
         var separationSq = pentetrationVector[0]*pentetrationVector[0] + pentetrationVector[1]*pentetrationVector[1];
