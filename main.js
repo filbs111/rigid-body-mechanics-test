@@ -8,7 +8,7 @@ var currentTime = null;
 var physStepTime = 3;   //phys step every 3 ms.
 var physTimeToCatchUp = 0;
 var maxIterationsPerDraw = 10;
-var friction_mu = 0.2;   //coefficient of friction. for now just have same for all object (pairs), and static, sliding friction same
+var friction_mu = 0.1;   //coefficient of friction. for now just have same for all object (pairs), and static, sliding friction same
 
 var physicsObjects = [];
 
@@ -50,7 +50,7 @@ addPhysicsObject({
     position: [300,300],
     velocity: [0,0],
     objType: "rect",
-    sideHalfEdges: [160,25],
+    sideHalfEdges: [140,25],
     cor: 0.6,
     invDensity: 0,
     fillStyle: "black"
@@ -58,12 +58,12 @@ addPhysicsObject({
 
 for (var ii=0;ii<10;ii++){
     addPhysicsObject({
-        position: [50,20+40*ii],
+        position: [50,20+50*ii],
         velocity: [0,0],
-        objType: "rect",
-        sideHalfEdges: [20,20],
-        //objType: "circle",
-        //radius: 15,
+        //objType: "rect",
+        //sideHalfEdges: [20,20],
+        objType: "circle",
+        radius: 25,
         cor: 0.6,
         invDensity: 1,
         fillStyle: `rgba(32, 45, ${ii*25}, 255)`
@@ -107,6 +107,7 @@ addPhysicsObject({
     invDensity: 1,
     fillStyle: "brown"
 });
+
 
 function effectiveCor(object1, object2){
     return Math.min(object1.cor, object2.cor); //TODO does this make sense?
@@ -165,9 +166,40 @@ function processPossibleCollisionCircleCircle(object1, object2){
             object2.position[1]-=(object2.invMass/totalInvMass)*vecToMoveTotal[1];
 
 
-
             updateSpeedForObject(object1);
             updateSpeedForObject(object2);
+
+
+            //friction.
+            //find speed change in direction of penetration/separation (same for circle-circle))
+            //multiply by coefficient of friction mu to get max speed change for friction
+            //find speed difference component in tangent direction (normal to normal)
+            //negate this speed up to the max speed change.
+
+            // for "normal" is contact normal = reaction force direction
+            //speed difference along normal = vel dot normal
+            //velocity in tangent direction = vel - (vel dot normal)*normal
+
+            var contactNormal = positionDifference.map(x=>x/currentSeparation);
+            var speedDifferenceAlongNormal = contactNormal[0]*velocityDifference[0] + contactNormal[1]*velocityDifference[1];
+            var velocityInTangentDirection = [
+                velocityDifference[0] - speedDifferenceAlongNormal*contactNormal[0],
+                velocityDifference[1] - speedDifferenceAlongNormal*contactNormal[1]
+            ];
+            var speedDifferenceInTangentDirection = Math.sqrt(
+                    velocityInTangentDirection[0]*velocityInTangentDirection[0] + 
+                    velocityInTangentDirection[1]*velocityInTangentDirection[1]);
+
+            var fractionToRemove = Math.min(1, Math.abs(speedDifferenceAlongNormal)*friction_mu/speedDifferenceInTangentDirection);
+                //is abs required? TODO handle speed=zero
+
+            var velocityToRemoveInTangentDirection = velocityInTangentDirection.map(x=>x*fractionToRemove);
+
+            object1.velocity[0]-=velocityToRemoveInTangentDirection[0]*object1.invMass/totalInvMass;
+            object1.velocity[1]-=velocityToRemoveInTangentDirection[1]*object1.invMass/totalInvMass;
+            object2.velocity[0]+=velocityToRemoveInTangentDirection[0]*object2.invMass/totalInvMass;
+            object2.velocity[1]+=velocityToRemoveInTangentDirection[1]*object2.invMass/totalInvMass;
+
 
             function updateSpeedForObject(theObject){
                 var velInMovingFrame = [
