@@ -309,6 +309,33 @@ function processPossibleCollisionCircleRectangle(circle, rect){
         updateSpeedForObject(object1);
         updateSpeedForObject(object2);
 
+
+
+        //friction
+        //this is a copy paste of CircleCircle code, but with pentetrationVector instead of positionDifference
+        var currentSeparation = Math.sqrt(separationSq);
+        var contactNormal = pentetrationVector.map(x=>x/currentSeparation);
+        var speedDifferenceAlongNormal = contactNormal[0]*velocityDifference[0] + contactNormal[1]*velocityDifference[1];
+        var velocityInTangentDirection = [
+            velocityDifference[0] - speedDifferenceAlongNormal*contactNormal[0],
+            velocityDifference[1] - speedDifferenceAlongNormal*contactNormal[1]
+        ];
+        var speedDifferenceInTangentDirection = Math.sqrt(
+                velocityInTangentDirection[0]*velocityInTangentDirection[0] + 
+                velocityInTangentDirection[1]*velocityInTangentDirection[1]);
+
+        var fractionToRemove = Math.min(1, Math.abs(speedDifferenceAlongNormal)*friction_mu/speedDifferenceInTangentDirection);
+            //is abs required? TODO handle speed=zero
+
+        var velocityToRemoveInTangentDirection = velocityInTangentDirection.map(x=>x*fractionToRemove);
+
+        object1.velocity[0]-=velocityToRemoveInTangentDirection[0]*object1.invMass/totalInvMass;
+        object1.velocity[1]-=velocityToRemoveInTangentDirection[1]*object1.invMass/totalInvMass;
+        object2.velocity[0]+=velocityToRemoveInTangentDirection[0]*object2.invMass/totalInvMass;
+        object2.velocity[1]+=velocityToRemoveInTangentDirection[1]*object2.invMass/totalInvMass;
+
+
+
         function updateSpeedForObject(theObject){
             var velInMovingFrame = [
                 theObject.velocity[0]- cOfMVelocity[0],
