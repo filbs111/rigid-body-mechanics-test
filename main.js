@@ -602,10 +602,17 @@ function updateAndRender(timestamp){
                 2*x.sideHalfEdges[0],
                 2*x.sideHalfEdges[1]
                 );
+            ctx.strokeRect(
+                x.position[0] - x.sideHalfEdges[0],
+                x.position[1] - x.sideHalfEdges[1],
+                2*x.sideHalfEdges[0],
+                2*x.sideHalfEdges[1]
+                );
         }else if (x.objType == "circle"){
             ctx.beginPath();
             ctx.arc(x.position[0], x.position[1], x.radius, 0, 2 * Math.PI);
             ctx.fill();
+            ctx.stroke();
         }
     });
 }
