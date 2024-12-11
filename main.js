@@ -586,7 +586,11 @@ function updateAndRender(timestamp){
     }
     
     //update display
-    ctx.clearRect(0, 0, 500, 500);
+    //ctx.clearRect(0, 0, 500, 500);
+
+    ctx.fillStyle = "#aaa";
+    ctx.fillRect(0, 0, 500, 500);
+
     physicsObjects.forEach((x) => {
         ctx.fillStyle = x.fillStyle;
 
