@@ -10,6 +10,7 @@ var physTimeToCatchUp = 0;
 var maxIterationsPerDraw = 10;
 var friction_mu = 0.1;   //coefficient of friction. for now just have same for all object (pairs), and static, sliding friction same
 
+var standardCor = 0.5;
 var physicsObjects = [];
 
 //TODO use classes ! 
@@ -24,7 +25,7 @@ addPhysicsObject({
     velocity: [0.3,1],
     objType: "rect",
     sideHalfEdges: [20,30],
-    cor: 0.6,
+    cor: standardCor,
     invDensity: 1,
     fillStyle: "red"
 });
@@ -33,7 +34,7 @@ addPhysicsObject({
     velocity: [0.3,1],
     objType: "rect",
     sideHalfEdges: [20,25],
-    cor: 0.6,
+    cor: standardCor,
     invDensity: 1,
     fillStyle: "green"
 });
@@ -42,7 +43,7 @@ addPhysicsObject({
     velocity: [0,0],
     objType: "rect",
     sideHalfEdges: [10,10],
-    cor: 0.6,
+    cor: standardCor,
     invDensity:1,
     fillStyle: "magenta"
 });
@@ -51,7 +52,7 @@ addPhysicsObject({
     velocity: [0,0],
     objType: "rect",
     sideHalfEdges: [140,25],
-    cor: 0.6,
+    cor: standardCor,
     invDensity: 0,
     fillStyle: "black"
 });
@@ -64,7 +65,7 @@ for (var ii=0;ii<10;ii++){
         //sideHalfEdges: [20,20],
         objType: "circle",
         radius: 25,
-        cor: 0.6,
+        cor: standardCor,
         invDensity: 1,
         fillStyle: `rgba(32, 45, ${ii*25}, 255)`
     });
@@ -76,7 +77,7 @@ addPhysicsObject({
     velocity: [-1,0],
     objType: "circle",
     radius: 40,
-    cor: 0.6,
+    cor: standardCor,
     invDensity: 1,
     fillStyle: "purple"
 });
@@ -85,7 +86,7 @@ addPhysicsObject({
     velocity: [1,0],
     objType: "circle",
     radius: 50,
-    cor: 0.6,
+    cor: standardCor,
     invDensity: 1,
     fillStyle: "cyan"
 });
@@ -94,7 +95,7 @@ addPhysicsObject({
     velocity: [0,-0.5],
     objType: "circle",
     radius: 20,
-    cor: 0.6,
+    cor: standardCor,
     invDensity: 1,
     fillStyle: "orange"
 });
@@ -103,7 +104,7 @@ addPhysicsObject({
     velocity: [-0.5,0],
     objType: "circle",
     radius: 10,
-    cor: 0.6,
+    cor: standardCor,
     invDensity: 1,
     fillStyle: "brown"
 });
