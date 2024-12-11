@@ -471,6 +471,17 @@ function processPossibleCollision(object1, object2){
 }
 
 
+var isPlaying = true;
+
+document.getElementById("playButton").addEventListener("click", evt => {
+    isPlaying = true;
+});
+document.getElementById("pauseButton").addEventListener("click", evt => {
+    isPlaying = false;
+});
+document.getElementById("stepButton").addEventListener("click", evt => {
+    physTimeToCatchUp+= physStepTime;
+});
 
 //for stepping physics engine.
 currentTime = window.performance.now();
@@ -487,7 +498,10 @@ function updateAndRender(timestamp){
     currentTime = timestamp;
     //console.log("elapsed time: " + timeDifference);
 
-    physTimeToCatchUp += timeDifference;
+
+    if (isPlaying){
+        physTimeToCatchUp += timeDifference;
+    }
 
     var iterationsToCatchUp = Math.floor(physTimeToCatchUp/physStepTime);
 
