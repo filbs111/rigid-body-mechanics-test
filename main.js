@@ -26,6 +26,7 @@ function addPhysicsObject(theObject){
 
 addPhysicsObject({
     position: [200,100],
+    rotation: 0,
     velocity: [0.3,1],
     objType: "rect",
     sideHalfEdges: [20,30],
@@ -36,6 +37,7 @@ addPhysicsObject({
 addPhysicsObject({
     position: [210,30],
     velocity: [0.3,1],
+    rotation: 0.1,
     objType: "rect",
     sideHalfEdges: [20,25],
     cor: standardCor,
@@ -45,6 +47,7 @@ addPhysicsObject({
 addPhysicsObject({
     position: [100,100],
     velocity: [0,0],
+    rotation: 0,
     objType: "rect",
     sideHalfEdges: [10,10],
     cor: standardCor,
@@ -54,6 +57,7 @@ addPhysicsObject({
 addPhysicsObject({
     position: [300,300],
     velocity: [0,0],
+    rotation: 0,
     objType: "rect",
     sideHalfEdges: [140,25],
     cor: standardCor,
@@ -65,6 +69,7 @@ for (var ii=0;ii<10;ii++){
     addPhysicsObject({
         position: [50,20+50*ii],
         velocity: [0,0],
+        rotation: 0,
         //objType: "rect",
         //sideHalfEdges: [20,20],
         objType: "circle",
@@ -79,6 +84,7 @@ for (var ii=0;ii<10;ii++){
 addPhysicsObject({
     position: [400,50],
     velocity: [-1,0],
+    rotation: 0,
     objType: "circle",
     radius: 40,
     cor: standardCor,
@@ -88,6 +94,7 @@ addPhysicsObject({
 addPhysicsObject({
     position: [200,50],
     velocity: [1,0],
+    rotation: 0,
     objType: "circle",
     radius: 50,
     cor: standardCor,
@@ -97,6 +104,7 @@ addPhysicsObject({
 addPhysicsObject({
     position: [200,50],
     velocity: [0,-0.5],
+    rotation: 0,
     objType: "circle",
     radius: 20,
     cor: standardCor,
@@ -106,6 +114,7 @@ addPhysicsObject({
 addPhysicsObject({
     position: [450,50],
     velocity: [-0.5,0],
+    rotation: 0,
     objType: "circle",
     radius: 10,
     cor: standardCor,
@@ -535,20 +544,27 @@ function updateAndRender(timestamp){
                 //select collision method using if. this could be neater - could have a collision 
                 // method defined for each object type (interface, implementation...)
 
-                if (x.position[0]< x.sideHalfEdges[0] && x.velocity[0] <0 ){
-                    x.position[0]= x.sideHalfEdges[0];
+                var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)];
+
+                var rotatedShapeBounds = [
+                    x.sideHalfEdges[0]*cxsx[0] + x.sideHalfEdges[1]*cxsx[1],
+                    x.sideHalfEdges[1]*cxsx[0] + x.sideHalfEdges[0]*cxsx[1]
+                ];
+
+                if (x.position[0]< rotatedShapeBounds[0] && x.velocity[0] <0 ){
+                    x.position[0]= rotatedShapeBounds[0];
                     x.velocity[0]=-x.velocity[0]*x.cor;
                 }
-                if (x.position[1] < x.sideHalfEdges[1] && x.velocity[1] <0 ){
-                    x.position[1]= x.sideHalfEdges[1];
+                if (x.position[1] < rotatedShapeBounds[1] && x.velocity[1] <0 ){
+                    x.position[1]= rotatedShapeBounds[1];
                     x.velocity[1]=-x.velocity[1]*x.cor;
                 }
-                if (x.position[0]> canvas_width -x.sideHalfEdges[0] && x.velocity[0] >0 ){
-                    x.position[0]= canvas_width -x.sideHalfEdges[0];
+                if (x.position[0]> canvas_width -rotatedShapeBounds[0] && x.velocity[0] >0 ){
+                    x.position[0]= canvas_width -rotatedShapeBounds[0];
                     x.velocity[0]= -x.velocity[0]*x.cor;
                 }
-                if (x.position[1]> canvas_height -x.sideHalfEdges[1] && x.velocity[1] >0 ){
-                    x.position[1]= canvas_height -x.sideHalfEdges[1];
+                if (x.position[1]> canvas_height -rotatedShapeBounds[1] && x.velocity[1] >0 ){
+                    x.position[1]= canvas_height -rotatedShapeBounds[1];
                     x.velocity[1]= -x.velocity[1]*x.cor;
                 }
             }else if (x.objType == "circle"){
@@ -600,18 +616,31 @@ function updateAndRender(timestamp){
 
         //TODO render method per object.
         if (x.objType == "rect"){
+            //rotated rectangle
+            //apparently it is possible to rotate the canvas context and use regular fillRect, strokeRect for this.
+            //TODO just use general poly drawing for this, since rotating the context is ridiculous!
+            
+            var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)];
+            var positionInRotatedFrame = [
+                x.position[0]*cxsx[0] + x.position[1]*cxsx[1],
+                x.position[1]*cxsx[0] - x.position[0]*cxsx[1],
+            ];
+
+            ctx.rotate(x.rotation);
             ctx.fillRect(
-                x.position[0] - x.sideHalfEdges[0],
-                x.position[1] - x.sideHalfEdges[1],
+                positionInRotatedFrame[0] - x.sideHalfEdges[0],
+                positionInRotatedFrame[1] - x.sideHalfEdges[1],
                 2*x.sideHalfEdges[0],
                 2*x.sideHalfEdges[1]
                 );
             ctx.strokeRect(
-                x.position[0] - x.sideHalfEdges[0],
-                x.position[1] - x.sideHalfEdges[1],
+                positionInRotatedFrame[0] - x.sideHalfEdges[0],
+                positionInRotatedFrame[1] - x.sideHalfEdges[1],
                 2*x.sideHalfEdges[0],
                 2*x.sideHalfEdges[1]
                 );
+            ctx.rotate(-x.rotation);
+
         }else if (x.objType == "circle"){
             ctx.beginPath();
             ctx.arc(x.position[0], x.position[1], x.radius, 0, 2 * Math.PI);
