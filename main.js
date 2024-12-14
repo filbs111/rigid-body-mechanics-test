@@ -2,6 +2,10 @@
 //inspired by reading 1st randy gaul article
 
 var canvas = document.getElementById("myCanvas");
+var canvas_width = 600;
+var canvas_height = 500;
+canvas.width = canvas_width;
+canvas.height = canvas_height;
 var ctx = canvas.getContext("2d");
 
 var currentTime = null;
@@ -9,7 +13,7 @@ var physStepTime = 3;   //phys step every 3 ms.
 var physTimeToCatchUp = 0;
 var maxIterationsPerDraw = 10;
 var friction_mu = 0.1;   //coefficient of friction. for now just have same for all object (pairs), and static, sliding friction same
-
+                            //NOTE does not handle this being zero!
 var standardCor = 0.5;
 var physicsObjects = [];
 
@@ -539,12 +543,12 @@ function updateAndRender(timestamp){
                     x.position[1]= x.sideHalfEdges[1];
                     x.velocity[1]=-x.velocity[1]*x.cor;
                 }
-                if (x.position[0]> 500 -x.sideHalfEdges[0] && x.velocity[0] >0 ){
-                    x.position[0]= 500 -x.sideHalfEdges[0];
+                if (x.position[0]> canvas_width -x.sideHalfEdges[0] && x.velocity[0] >0 ){
+                    x.position[0]= canvas_width -x.sideHalfEdges[0];
                     x.velocity[0]= -x.velocity[0]*x.cor;
                 }
-                if (x.position[1]> 500 -x.sideHalfEdges[1] && x.velocity[1] >0 ){
-                    x.position[1]= 500 -x.sideHalfEdges[1];
+                if (x.position[1]> canvas_height -x.sideHalfEdges[1] && x.velocity[1] >0 ){
+                    x.position[1]= canvas_height -x.sideHalfEdges[1];
                     x.velocity[1]= -x.velocity[1]*x.cor;
                 }
             }else if (x.objType == "circle"){
@@ -556,12 +560,12 @@ function updateAndRender(timestamp){
                     x.position[1]= x.radius;
                     x.velocity[1]=-x.velocity[1]*x.cor;
                 }
-                if (x.position[0]> 500 -x.radius && x.velocity[0] >0 ){
-                    x.position[0]= 500 -x.radius;
+                if (x.position[0]> canvas_width -x.radius && x.velocity[0] >0 ){
+                    x.position[0]= canvas_width -x.radius;
                     x.velocity[0]= -x.velocity[0]*x.cor;
                 }
-                if (x.position[1]> 500 -x.radius && x.velocity[1] >0 ){
-                    x.position[1]= 500 -x.radius;
+                if (x.position[1]> canvas_height -x.radius && x.velocity[1] >0 ){
+                    x.position[1]= canvas_height -x.radius;
                     x.velocity[1]= -x.velocity[1]*x.cor;
                 }
             }
@@ -586,10 +590,10 @@ function updateAndRender(timestamp){
     }
     
     //update display
-    //ctx.clearRect(0, 0, 500, 500);
+    //ctx.clearRect(0, 0, canvas_width, canvas_height);
 
     ctx.fillStyle = "#aaa";
-    ctx.fillRect(0, 0, 500, 500);
+    ctx.fillRect(0, 0, canvas_width, canvas_height);
 
     physicsObjects.forEach((x) => {
         ctx.fillStyle = x.fillStyle;
