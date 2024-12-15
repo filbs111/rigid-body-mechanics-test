@@ -556,7 +556,7 @@ function updateAndRender(timestamp){
                 //select collision method using if. this could be neater - could have a collision 
                 // method defined for each object type (interface, implementation...)
 
-                var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)];
+                var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)].map(Math.abs);
 
                 var rotatedShapeBounds = [
                     x.sideHalfEdges[0]*cxsx[0] + x.sideHalfEdges[1]*cxsx[1],
