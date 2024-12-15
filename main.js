@@ -38,7 +38,29 @@ function addPhysicsObject(theObject){
             {dir:[0,-1],  howFar:halfEdges[1]}
         ];
     }
-    //TODO similar for explicit convex hull (not rect) - construct directions from points.
+
+    //similar for explicit convex hull - construct directions from points. (note this logic could be used to gen edges for rect too)
+    if (theObject.objType == "chull"){
+        var edges = [];
+        var points = theObject.points;
+        var lastpoint = points[points.length-1];
+        for (var ii=0;ii<points.length;ii++){
+            var point = points[ii];
+            var differenceVec = [
+                point[0]-lastpoint[0],
+                point[1]-lastpoint[1]
+            ];
+            var differenceLen = Math.sqrt(differenceVec[0]*differenceVec[0] + differenceVec[1]*differenceVec[1]);
+            var normal = [-differenceVec[1],differenceVec[0]].map(x=>x/differenceLen);
+            edges.push({
+                dir: normal,
+                howFar: normal[0]*point[0]+ normal[1]*point[1]
+            }); 
+
+            lastpoint = point;
+        }
+        theObject.edges=edges;
+    }
 
     physicsObjects.push(theObject);
 }
@@ -139,6 +161,18 @@ addPhysicsObject({
     cor: standardCor,
     invDensity: 1,
     fillStyle: "brown"
+});
+addPhysicsObject({
+    position: [400,50],
+    velocity: [-0.5,0],
+    radius:20,  //a cheat to get mass calculation (TODO calc mass for general convex shape)
+    rotation: 0,
+    objType: "chull",
+    points: [[-40,-40], [-40,40], [10,40], [40,10], [40,-40]],
+    //points: [[-40,-40], [-40,40], [40,-40]],  //triangle
+    cor: standardCor,
+    invDensity: 1,
+    fillStyle: "pink"
 });
 
 
@@ -437,7 +471,7 @@ function processPossibleCollisionChullChull(chull1, chull2){
         var cxsxEdges = [Math.cos(chullForEdges.rotation), Math.sin(chullForEdges.rotation)];
 
         //transform points into frame of other shape
-        var rotationDifference = (chullForPoints.rotation - chullForEdges.rotation); //sign?
+        var rotationDifference = -(chullForPoints.rotation - chullForEdges.rotation); //sign?
         
         var cxsxDifference = [Math.cos(rotationDifference), Math.sin(rotationDifference)];
 
@@ -448,7 +482,7 @@ function processPossibleCollisionChullChull(chull1, chull2){
         var rotatedPositionDifference = [
             (positionDifference[0]*cxsxEdges[0] + positionDifference[1]*cxsxEdges[1]),
             (positionDifference[1]*cxsxEdges[0] - positionDifference[0]*cxsxEdges[1])
-        ]
+        ];
 
         var transformedPoints = chullForPoints.points.map(p=>[
             (p[0]*cxsxDifference[0] + p[1]*cxsxDifference[1])+rotatedPositionDifference[0],
@@ -576,7 +610,14 @@ function processPossibleCollision(object1, object2){
         return processPossibleCollisionCircleRectangle(object2, object1);
     }
 
-    processPossibleCollisionRectRect(object1, object2);
+    //TODO remove this, since chull chull will apply.
+    if ( (object1.objType == "rect") && (object2.objType == "rect")){
+        return processPossibleCollisionRectRect(object1, object2);
+    }
+
+    if ( (object1.objType != "circle") && (object2.objType != "circle")){
+        processPossibleCollisionChullChull(object1, object2);
+    }
 }
 
 
@@ -739,6 +780,24 @@ function updateAndRender(timestamp){
         }else if (x.objType == "circle"){
             ctx.beginPath();
             ctx.arc(x.position[0], x.position[1], x.radius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+        }else if (x.objType == "chull"){
+            var transformedPoints = x.points.map(p =>
+                [
+                    p[0] + x.position[0],   //TODO include rotation
+                    p[1] + x.position[1]
+                ]
+            );
+            
+            ctx.beginPath();
+            var point = transformedPoints[transformedPoints.length-1];
+            ctx.moveTo(point[0],point[1]);
+            for (var ii=0;ii<transformedPoints.length;ii++){
+                point = transformedPoints[ii];
+                ctx.lineTo(point[0],point[1]);
+            }
+            ctx.closePath();
             ctx.fill();
             ctx.stroke();
         }
