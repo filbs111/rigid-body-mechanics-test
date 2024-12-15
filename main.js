@@ -720,8 +720,41 @@ function updateAndRender(timestamp){
                     x.position[1]= canvas_height -x.radius;
                     x.velocity[1]= -x.velocity[1]*x.cor;
                 }
-            }
+            }else if (x.objType == "chull"){
+                var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)];
+                var transformedPoints = x.points.map(p =>
+                    [
+                        p[0]*cxsx[0] - p[1]*cxsx[1]+ x.position[0],   //TODO include rotation
+                        p[1]*cxsx[0] + p[0]*cxsx[1]+ x.position[1]
+                    ]
+                );
 
+                // var minx=transformedPoints.map(x=>x[0]).reduce(Math.min, Number.MAX_VALUE);
+                // var miny=transformedPoints.map(x=>x[1]).reduce(Math.min, Number.MAX_VALUE);
+                // var maxx=transformedPoints.map(x=>x[0]).reduce(Math.max, Number.MIN_VALUE);
+                // var maxy=transformedPoints.map(x=>x[1]).reduce(Math.max, Number.MIN_VALUE);  //why can't just do this?
+                var minx=transformedPoints.map(x=>x[0]).reduce((a,b) => Math.min(a,b), Number.MAX_VALUE);
+                var miny=transformedPoints.map(x=>x[1]).reduce((a,b) => Math.min(a,b), Number.MAX_VALUE);
+                var maxx=transformedPoints.map(x=>x[0]).reduce((a,b) => Math.max(a,b), Number.MIN_VALUE);
+                var maxy=transformedPoints.map(x=>x[1]).reduce((a,b) => Math.max(a,b), Number.MIN_VALUE);
+
+                if (minx<0 && x.velocity[0] <0 ){
+                    x.position[0]-=minx;
+                    x.velocity[0]=-x.velocity[0]*x.cor;
+                }
+                if (miny<0 && x.velocity[1] <0 ){
+                    x.position[1]-=miny;
+                    x.velocity[1]=-x.velocity[1]*x.cor;
+                }
+                if (maxx> canvas_width && x.velocity[0] >0 ){
+                    x.position[0]-= maxx-canvas_width;
+                    x.velocity[0]= -x.velocity[0]*x.cor;
+                }
+                if (maxy> canvas_height && x.velocity[1] >0 ){
+                    x.position[1]-= maxy-canvas_height;
+                    x.velocity[1]= -x.velocity[1]*x.cor;
+                }
+            }
             
         });
 
