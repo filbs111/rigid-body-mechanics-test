@@ -55,9 +55,9 @@ addPhysicsObject({
     fillStyle: "magenta"
 });
 addPhysicsObject({
-    position: [300,300],
+    position: [250,300],
     velocity: [0,0],
-    rotation: 0,
+    rotation: 0.4,
     objType: "rect",
     sideHalfEdges: [140,25],
     cor: standardCor,
@@ -252,7 +252,14 @@ function processPossibleCollisionCircleRectangle(circle, rect){
         object1.position[0] - object2.position[0],
         object1.position[1] - object2.position[1]
     ];
-    var positionSigns = positionDifference.map(x=> x/(Math.abs(x)+0.0000000001));  //NOTE hack to handle zeros
+
+    var cxsx = [Math.cos(rect.rotation), Math.sin(rect.rotation)];
+    var positionDifferenceInRotatedFrame = [
+        cxsx[0] * positionDifference[0] + cxsx[1] * positionDifference[1],
+        cxsx[0] * positionDifference[1] - cxsx[1] * positionDifference[0],
+    ];
+
+    var positionSigns = positionDifferenceInRotatedFrame.map(x=> x/(Math.abs(x)+0.0000000001));  //NOTE hack to handle zeros
 
     var velocityDifference = [
         object1.velocity[0] - object2.velocity[0],
@@ -260,7 +267,7 @@ function processPossibleCollisionCircleRectangle(circle, rect){
     ];
 
     //calculate penetration vector / vector of minimum movement to separate shapes
-    var absPosDifference = positionDifference.map(Math.abs);
+    var absPosDifference = positionDifferenceInRotatedFrame.map(Math.abs);
     var penForAxes = [
         absPosDifference[0] - rect.sideHalfEdges[0],
         absPosDifference[1] - rect.sideHalfEdges[1],
@@ -297,8 +304,13 @@ function processPossibleCollisionCircleRectangle(circle, rect){
         }  //else is not colliding
     }
 
-    function doCollision(pentetrationVector){
+    function doCollision(pentetrationVectorInRotatedFrame){
         
+        var pentetrationVector = [
+            cxsx[0] * pentetrationVectorInRotatedFrame[0] - cxsx[1] * pentetrationVectorInRotatedFrame[1],
+            cxsx[0] * pentetrationVectorInRotatedFrame[1] + cxsx[1] * pentetrationVectorInRotatedFrame[0],
+        ];
+
         //move shapes apart by this vector
         var totalInvMass = object1.invMass + object2.invMass;
         object1.position[0] -= object1.invMass/totalInvMass * pentetrationVector[0];
