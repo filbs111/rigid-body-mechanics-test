@@ -166,7 +166,7 @@ addPhysicsObject({
     position: [400,50],
     velocity: [-0.5,0],
     radius:20,  //a cheat to get mass calculation (TODO calc mass for general convex shape)
-    rotation: 0,
+    rotation: 0.3,
     objType: "chull",
     points: [[-40,-40], [-40,40], [10,40], [40,10], [40,-40]],
     //points: [[-40,-40], [-40,40], [40,-40]],  //triangle
@@ -783,10 +783,11 @@ function updateAndRender(timestamp){
             ctx.fill();
             ctx.stroke();
         }else if (x.objType == "chull"){
+            var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)];
             var transformedPoints = x.points.map(p =>
                 [
-                    p[0] + x.position[0],   //TODO include rotation
-                    p[1] + x.position[1]
+                    p[0]*cxsx[0] - p[1]*cxsx[1]+ x.position[0],   //TODO include rotation
+                    p[1]*cxsx[0] + p[0]*cxsx[1] + x.position[1]
                 ]
             );
             
