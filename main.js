@@ -28,14 +28,14 @@ function addPhysicsObject(theObject){
         theObject.points = [
             halfEdges,
             [halfEdges[0], -halfEdges[1]],
-            [-halfEdges[0], halfEdges[1]],
-            [-halfEdges[0], -halfEdges[1]]
+            [-halfEdges[0], -halfEdges[1]],
+            [-halfEdges[0], halfEdges[1]]
         ];
         theObject.edges = [
-            {dir:[1,0], howFar:halfEdges[0]},    //unit normal direction, displacement of face along this direction from shape centre.
-            {dir:[-1,0],  howFar:halfEdges[0]},
             {dir:[0,1],  howFar:halfEdges[1]},
-            {dir:[0,-1],  howFar:halfEdges[1]}
+            {dir:[1,0], howFar:halfEdges[0]},    //unit normal direction, displacement of face along this direction from shape centre.
+            {dir:[0,-1],  howFar:halfEdges[1]},
+            {dir:[-1,0],  howFar:halfEdges[0]}
         ];
     }
 
@@ -322,6 +322,7 @@ function processPossibleCollisionCircleChull(circle, chull){
 
     var edges = chull.edges;
     var leastPenetration = Number.MAX_VALUE;
+    var collidingEdgeIdx;
 
     for (var ii=0;ii<edges.length;ii++){
         var edge = edges[ii];
@@ -334,6 +335,7 @@ function processPossibleCollisionCircleChull(circle, chull){
         if (penetration<leastPenetration){
             leastPenetration = penetration;
             penNormal = edgedir;
+            collidingEdgeIdx = ii;
         }
     }
     //currently this is like collision of point with convex hull with edges moved outward by sphere radius, without curved corners.
@@ -341,6 +343,63 @@ function processPossibleCollisionCircleChull(circle, chull){
     //TODO handle corner collision properly
 
     if (leastPenetration>0){
+        if (leastPenetration>circle.radius){
+            doCollision(penNormal.map(x=>-x*leastPenetration)); //circle centre is inside convex shape
+            return;
+        }
+
+        var endPoint = chull.points[collidingEdgeIdx];
+        var startPoint = chull.points[(collidingEdgeIdx+chull.points.length-1)%chull.points.length];  //because js % is strange
+
+        var alongEdgeVec = [  //TODO store edge vec instead of recalculating?
+            endPoint[0] - startPoint[0],
+            endPoint[1] - startPoint[1]
+        ];
+        var alongEdgeVecLenSq = alongEdgeVec[0]*alongEdgeVec[0] + alongEdgeVec[1]*alongEdgeVec[1];
+
+        var pointRelativeToStartPoint = [
+            positionDifferenceInRotatedFrame[0] - startPoint[0],
+            positionDifferenceInRotatedFrame[1] - startPoint[1]
+        ];   //in rotated frame
+
+        var pointRelativeToEndPoint = [
+            positionDifferenceInRotatedFrame[0] - endPoint[0],
+            positionDifferenceInRotatedFrame[1] - endPoint[1]
+        ]; 
+
+
+        var fractionAlongEdge = (pointRelativeToStartPoint[0]*alongEdgeVec[0] + pointRelativeToStartPoint[1]*alongEdgeVec[1])/alongEdgeVecLenSq;
+
+        //console.log(fractionAlongEdge);
+
+        if (fractionAlongEdge<0){
+            var pointRelativeToStartPointLenSq = pointRelativeToStartPoint[0]*pointRelativeToStartPoint[0]+pointRelativeToStartPoint[1]*pointRelativeToStartPoint[1];
+
+            if (pointRelativeToStartPointLenSq < circle.radius*circle.radius){
+                var distFromVert = Math.sqrt(pointRelativeToStartPointLenSq);
+                var penetration = circle.radius - distFromVert;
+                var multiplier = penetration/distFromVert;
+                console.log("x");
+                doCollision(pointRelativeToStartPoint.map(x=>-multiplier*x));
+                    //sign here is not obvious - switch it and doesn't break!
+            }
+            return;
+        }
+      
+        if(fractionAlongEdge>1){
+            var pointRelativeToEndPointLenSq = pointRelativeToEndPoint[0]*pointRelativeToEndPoint[0]+pointRelativeToEndPoint[1]*pointRelativeToEndPoint[1];
+
+            if (pointRelativeToEndPointLenSq < circle.radius*circle.radius){
+                var distFromVert = Math.sqrt(pointRelativeToEndPointLenSq);
+                var penetration = circle.radius - distFromVert;
+                var multiplier = penetration/distFromVert;
+                console.log("xx");
+                doCollision(pointRelativeToEndPoint.map(x=>-multiplier*x));
+                    //sign here is not obvious - switch it and doesn't break!
+            }
+            return;
+        }
+
         doCollision(penNormal.map(x=>-x*leastPenetration));
     }
 
@@ -738,10 +797,12 @@ function processPossibleCollision(object1, object2){
     }
 
     if ( (object1.objType == "circle") && (object2.objType == "rect")){
-        return processPossibleCollisionCircleRectangle(object1, object2);
+        //return processPossibleCollisionCircleRectangle(object1, object2);
+        return processPossibleCollisionCircleChull(object1, object2);
     }
     if ( (object2.objType == "circle") && (object1.objType == "rect")){
-        return processPossibleCollisionCircleRectangle(object2, object1);
+        //return processPossibleCollisionCircleRectangle(object2, object1);
+        return processPossibleCollisionCircleChull(object2, object1);
     }
 
     //TODO remove this, since chull chull will apply.
@@ -803,7 +864,7 @@ function updateAndRender(timestamp){
         iterationsToCatchUp=maxIterationsPerDraw;
         physTimeToCatchUp=0;
     }
-    console.log("will do " + iterationsToCatchUp + " iterations" );
+    //console.log("will do " + iterationsToCatchUp + " iterations" );
 
     while (iterationsToCatchUp > 0){
         iterationsToCatchUp-=1;
