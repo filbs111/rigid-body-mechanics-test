@@ -837,38 +837,12 @@ function updateAndRender(timestamp){
         ctx.fillStyle = x.fillStyle;
 
         //TODO render method per object.
-        if (x.objType == "rect"){
-            //rotated rectangle
-            //apparently it is possible to rotate the canvas context and use regular fillRect, strokeRect for this.
-            //TODO just use general poly drawing for this, since rotating the context is ridiculous!
-            
-            var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)];
-            var positionInRotatedFrame = [
-                x.position[0]*cxsx[0] + x.position[1]*cxsx[1],
-                x.position[1]*cxsx[0] - x.position[0]*cxsx[1],
-            ];
-
-            ctx.rotate(x.rotation);
-            ctx.fillRect(
-                positionInRotatedFrame[0] - x.sideHalfEdges[0],
-                positionInRotatedFrame[1] - x.sideHalfEdges[1],
-                2*x.sideHalfEdges[0],
-                2*x.sideHalfEdges[1]
-                );
-            ctx.strokeRect(
-                positionInRotatedFrame[0] - x.sideHalfEdges[0],
-                positionInRotatedFrame[1] - x.sideHalfEdges[1],
-                2*x.sideHalfEdges[0],
-                2*x.sideHalfEdges[1]
-                );
-            ctx.rotate(-x.rotation);
-
-        }else if (x.objType == "circle"){
+        if (x.objType == "circle"){
             ctx.beginPath();
             ctx.arc(x.position[0], x.position[1], x.radius, 0, 2 * Math.PI);
             ctx.fill();
             ctx.stroke();
-        }else if (x.objType == "chull"){
+        }else if (x.objType == "chull" || x.objType == "rect"){
             var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)];
             var transformedPoints = x.points.map(p =>
                 [
