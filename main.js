@@ -842,6 +842,14 @@ function updateAndRender(timestamp){
             ctx.arc(x.position[0], x.position[1], x.radius, 0, 2 * Math.PI);
             ctx.fill();
             ctx.stroke();
+
+            //line to show rotation.
+            ctx.beginPath();
+            ctx.moveTo(x.position[0], x.position[1]);
+            ctx.lineTo(x.position[0]+x.radius*Math.sin(x.rotation),x.position[1]+x.radius*Math.cos(x.rotation));
+            ctx.closePath();
+            ctx.stroke();
+
         }else if (x.objType == "chull" || x.objType == "rect"){
             var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)];
             var transformedPoints = x.points.map(p =>
