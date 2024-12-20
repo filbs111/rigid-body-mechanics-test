@@ -726,6 +726,11 @@ function updateAndRender(timestamp){
             x.position[1] += x.velocity[1];
         });
 
+        //rotate objects (simple continuous rotation test)
+        physicsObjects.forEach((x) => {
+            x.rotation = (x.rotation+0.001) % (Math.PI *2);
+        });
+
         //collide with level box.
         physicsObjects.forEach((x) => {
 
@@ -846,7 +851,7 @@ function updateAndRender(timestamp){
             //line to show rotation.
             ctx.beginPath();
             ctx.moveTo(x.position[0], x.position[1]);
-            ctx.lineTo(x.position[0]+x.radius*Math.sin(x.rotation),x.position[1]+x.radius*Math.cos(x.rotation));
+            ctx.lineTo(x.position[0]+x.radius*Math.sin(x.rotation),x.position[1]-x.radius*Math.cos(x.rotation));
             ctx.closePath();
             ctx.stroke();
 
