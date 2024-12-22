@@ -62,6 +62,8 @@ function addPhysicsObject(theObject){
         theObject.edges=edges;
     }
 
+    theObject.angVec = 0;
+
     physicsObjects.push(theObject);
 }
 
@@ -253,12 +255,21 @@ function processPossibleCollisionCircleCircle(object1, object2){
                 velocityDifference[0] - speedDifferenceAlongNormal*contactNormal[0],
                 velocityDifference[1] - speedDifferenceAlongNormal*contactNormal[1]
             ];
-            var speedDifferenceInTangentDirection = Math.sqrt(
-                    velocityInTangentDirection[0]*velocityInTangentDirection[0] + 
-                    velocityInTangentDirection[1]*velocityInTangentDirection[1]);
 
-            var fractionToRemove = Math.min(1, Math.abs(speedDifferenceAlongNormal)*friction_mu/speedDifferenceInTangentDirection);
+            //x-product -> signed
+            var speedDifferenceInTangentDirection = 
+                    velocityInTangentDirection[0]*contactNormal[1]-
+                    velocityInTangentDirection[1]*contactNormal[0];
+
+            //include influence of angular velocity.
+            speedDifferenceInTangentDirection += object1.angVec * object1.radius + object2.angVec * object2.radius;
+
+            //TODO include influence of torque impact on effective inverse mass.
+
+            var fractionToRemove = Math.min(1, friction_mu* Math.abs(speedDifferenceAlongNormal/speedDifferenceInTangentDirection));
                 //is abs required? TODO handle speed=zero
+
+            //TODO affect linear velocity less (because speed of contact affected by angualr velocity)
 
             var velocityToRemoveInTangentDirection = velocityInTangentDirection.map(x=>x*fractionToRemove);
 
@@ -266,6 +277,11 @@ function processPossibleCollisionCircleCircle(object1, object2){
             object1.velocity[1]-=velocityToRemoveInTangentDirection[1]*object1.invMass/totalInvMass;
             object2.velocity[0]+=velocityToRemoveInTangentDirection[0]*object2.invMass/totalInvMass;
             object2.velocity[1]+=velocityToRemoveInTangentDirection[1]*object2.invMass/totalInvMass;
+
+            //impact of torque (rough!)
+            object1.angVec-= speedDifferenceInTangentDirection*fractionToRemove / object1.radius;   //what to put here? basically radius because torque, but 
+                //divided by rotational inertia, which scales with radius, so really this might be 1/rad^3...
+            object2.angVec-= speedDifferenceInTangentDirection*fractionToRemove / object2.radius; 
 
             function updateSpeedForObject(theObject){
                 var velInMovingFrame = [
@@ -726,9 +742,9 @@ function updateAndRender(timestamp){
             x.position[1] += x.velocity[1];
         });
 
-        //rotate objects (simple continuous rotation test)
+        //rotate objects
         physicsObjects.forEach((x) => {
-            x.rotation = (x.rotation+0.001) % (Math.PI *2);
+            x.rotation = (x.rotation+x.angVec) % (Math.PI *2);
         });
 
         //collide with level box.
