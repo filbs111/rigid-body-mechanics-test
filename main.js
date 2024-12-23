@@ -781,41 +781,27 @@ function updateAndRender(timestamp){
             }else if (x.objType == "circle"){
                 if (x.position[0]< x.radius && x.velocity[0] <0 ){
                     x.position[0]= x.radius;
-                    x.velocity[0]=-x.velocity[0]*x.cor;
+                    levelCollideFrictionForCircle(1, -1);
                 }
                 if (x.position[1] < x.radius && x.velocity[1] <0 ){ //ceiling
                     x.position[1]= x.radius;
-                    
-                    var velchange = -(1+x.cor)*x.velocity[1];
-                    x.velocity[1]+=velchange;
-
-                    var surfaceVelocity = x.velocity[0] + x.radius*x.angVel;
-                    //apply implulse up to limit determined by coefficient of friction, that will change surface veclocity to zero.
-                    var invMomentOfInertia = 1/(x.radius*x.radius);    //TODO choose something sensible for this (disc? ball? suspect want 1/r^3, or 1/r^4...)
-                    var effectiveInvMass = x.invMass + invMomentOfInertia*x.radius*x.radius;  //AFAIK this part is good.
-                    var impulseRequiredToStop = surfaceVelocity/effectiveInvMass;
-
-                    if (impulseRequiredToStop!=0){
-
-                        var normalImpulse = velchange/x.invMass;
-                        var frictionImpulse = impulseRequiredToStop * Math.min( 1 , friction_mu*Math.abs(normalImpulse/impulseRequiredToStop));
-                        //var frictionImpulse = impulseRequiredToStop;    //sticky (infinite mu)
-
-                        x.velocity[0]-= frictionImpulse*x.invMass;
-                        x.angVel -= frictionImpulse*invMomentOfInertia*x.radius;
-                    }
+                    levelCollideFrictionForCircle(0, 1);
                 }
                 if (x.position[0]> canvas_width -x.radius && x.velocity[0] >0 ){
                     x.position[0]= canvas_width -x.radius;
-                    x.velocity[0]= -x.velocity[0]*x.cor;
+                    levelCollideFrictionForCircle(1, 1);
                 }
                 if (x.position[1]> canvas_height -x.radius && x.velocity[1] >0 ){       //floor
                     x.position[1]= canvas_height -x.radius;
-                
-                    var velchange = -(1+x.cor)*x.velocity[1];
-                    x.velocity[1]+=velchange;
+                    levelCollideFrictionForCircle(0, -1);
+                }
 
-                    var surfaceVelocity = x.velocity[0] - x.radius*x.angVel;
+                function levelCollideFrictionForCircle(frictionDimensionIndex, sign){
+                    var normalDimension = 1-frictionDimensionIndex;
+                    var velchange = -(1+x.cor)*x.velocity[normalDimension];
+                    x.velocity[normalDimension]+=velchange;
+
+                    var surfaceVelocity = x.velocity[frictionDimensionIndex] + sign*x.radius*x.angVel;
                     //apply implulse up to limit determined by coefficient of friction, that will change surface veclocity to zero.
                     var invMomentOfInertia = 1/(x.radius*x.radius);    //TODO choose something sensible for this (disc? ball? suspect want 1/r^3, or 1/r^4...)
                     var effectiveInvMass = x.invMass + invMomentOfInertia*x.radius*x.radius;  //AFAIK this part is good.
@@ -827,10 +813,11 @@ function updateAndRender(timestamp){
                         var frictionImpulse = impulseRequiredToStop * Math.min( 1 , friction_mu*Math.abs(normalImpulse/impulseRequiredToStop));
                         //var frictionImpulse = impulseRequiredToStop;    //sticky (infinite mu)
 
-                        x.velocity[0]-= frictionImpulse*x.invMass;
-                        x.angVel += frictionImpulse*invMomentOfInertia*x.radius;
+                        x.velocity[frictionDimensionIndex]-= frictionImpulse*x.invMass;
+                        x.angVel -= sign*frictionImpulse*invMomentOfInertia*x.radius;
                     }
                 }
+
             }else if (x.objType == "chull"){
                 var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)];
                 var transformedPoints = x.points.map(p =>
