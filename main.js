@@ -62,7 +62,7 @@ function addPhysicsObject(theObject){
         theObject.edges=edges;
     }
 
-    theObject.angVec = 0;
+    theObject.angVel = 0;
 
     physicsObjects.push(theObject);
 }
@@ -122,6 +122,7 @@ for (var ii=0;ii<10;ii++){
         fillStyle: `rgba(32, 45, ${ii*25}, 255)`
     });
 }
+
 
 //CIRCLES
 addPhysicsObject({
@@ -262,7 +263,7 @@ function processPossibleCollisionCircleCircle(object1, object2){
                     velocityInTangentDirection[1]*contactNormal[0];
 
             //include influence of angular velocity.
-            speedDifferenceInTangentDirection += object1.angVec * object1.radius + object2.angVec * object2.radius;
+            speedDifferenceInTangentDirection += object1.angVel * object1.radius + object2.angVel * object2.radius;
 
             //TODO include influence of torque impact on effective inverse mass.
 
@@ -279,9 +280,9 @@ function processPossibleCollisionCircleCircle(object1, object2){
             object2.velocity[1]+=velocityToRemoveInTangentDirection[1]*object2.invMass/totalInvMass;
 
             //impact of torque (rough!)
-            object1.angVec-= speedDifferenceInTangentDirection*fractionToRemove / object1.radius;   //what to put here? basically radius because torque, but 
+            object1.angVel-= speedDifferenceInTangentDirection*fractionToRemove / object1.radius;   //what to put here? basically radius because torque, but
                 //divided by rotational inertia, which scales with radius, so really this might be 1/rad^3...
-            object2.angVec-= speedDifferenceInTangentDirection*fractionToRemove / object2.radius; 
+            object2.angVel-= speedDifferenceInTangentDirection*fractionToRemove / object2.radius;
 
             function updateSpeedForObject(theObject){
                 var velInMovingFrame = [
@@ -744,7 +745,7 @@ function updateAndRender(timestamp){
 
         //rotate objects
         physicsObjects.forEach((x) => {
-            x.rotation = (x.rotation+x.angVec) % (Math.PI *2);
+            x.rotation = (x.rotation+x.angVel) % (Math.PI *2);
         });
 
         //collide with level box.
@@ -790,9 +791,27 @@ function updateAndRender(timestamp){
                     x.position[0]= canvas_width -x.radius;
                     x.velocity[0]= -x.velocity[0]*x.cor;
                 }
-                if (x.position[1]> canvas_height -x.radius && x.velocity[1] >0 ){
+                if (x.position[1]> canvas_height -x.radius && x.velocity[1] >0 ){       //floor
                     x.position[1]= canvas_height -x.radius;
-                    x.velocity[1]= -x.velocity[1]*x.cor;
+                
+                    var velchange = -(1+x.cor)*x.velocity[1];
+                    x.velocity[1]+=velchange;
+
+                    var surfaceVelocity = x.velocity[0] - x.radius*x.angVel;
+                    //apply implulse up to limit determined by coefficient of friction, that will change surface veclocity to zero.
+                    var invMomentOfInertia = 1/(x.radius*x.radius);    //TODO choose something sensible for this (disc? ball? suspect want 1/r^3, or 1/r^4...)
+                    var effectiveInvMass = x.invMass + invMomentOfInertia*x.radius*x.radius;  //AFAIK this part is good.
+                    var impulseRequiredToStop = surfaceVelocity/effectiveInvMass;
+
+                    if (impulseRequiredToStop!=0){
+
+                        var normalImpulse = velchange/x.invMass;
+                        var frictionImpulse = impulseRequiredToStop * Math.min( 1 , friction_mu*Math.abs(normalImpulse/impulseRequiredToStop));
+                        //var frictionImpulse = impulseRequiredToStop;    //sticky (infinite mu)
+
+                        x.velocity[0]-= frictionImpulse*x.invMass;
+                        x.angVel += frictionImpulse*invMomentOfInertia*x.radius;
+                    }
                 }
             }else if (x.objType == "chull"){
                 var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)];
