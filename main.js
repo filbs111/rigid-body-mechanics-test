@@ -864,10 +864,12 @@ function updateAndRender(timestamp){
             }
         }
 
-        //apply gravity. 
+        //apply gravity.
+        var gravDirection = (0.001*timestamp) % (2*Math.PI);
         physicsObjects.forEach((x) => {
             if (x.invDensity!=0){
-                x.velocity[1]-=0.01;
+                x.velocity[0]+=0.01*Math.cos(gravDirection);
+                x.velocity[1]+=0.01*Math.sin(gravDirection);
             }
         });
     }
