@@ -259,30 +259,29 @@ function processPossibleCollisionCircleCircle(object1, object2){
 
             //x-product -> signed
             var speedDifferenceInTangentDirection = 
-                    velocityInTangentDirection[0]*contactNormal[1]-
-                    velocityInTangentDirection[1]*contactNormal[0];
+                velocityInTangentDirection[0]*contactNormal[1]-
+                velocityInTangentDirection[1]*contactNormal[0];
 
-            //include influence of angular velocity.
             speedDifferenceInTangentDirection += object1.angVel * object1.radius + object2.angVel * object2.radius;
 
-            //TODO include influence of torque impact on effective inverse mass.
+            var normalImpulse = speedDifferenceAlongNormal*(1+cor)/totalInvMass;
 
-            var fractionToRemove = Math.min(1, friction_mu* Math.abs(speedDifferenceAlongNormal/speedDifferenceInTangentDirection));
-                //is abs required? TODO handle speed=zero
+            var invMomentOfInertia1 = 1/(object1.radius*object1.radius);    //TODO calculate this properly
+            var invMomentOfInertia2 = 1/(object2.radius*object2.radius);    //""
 
-            //TODO affect linear velocity less (because speed of contact affected by angualr velocity)
+            var effectiveInvMassForTangentDirection = totalInvMass + invMomentOfInertia1*object1.radius*object1.radius + invMomentOfInertia2*object2.radius*object2.radius;
+            var impulseRequiredToStop = speedDifferenceInTangentDirection/effectiveInvMassForTangentDirection;
 
-            var velocityToRemoveInTangentDirection = velocityInTangentDirection.map(x=>x*fractionToRemove);
+            var frictionImpulse = impulseRequiredToStop*Math.min(1, friction_mu* Math.abs(normalImpulse/impulseRequiredToStop));
 
-            object1.velocity[0]-=velocityToRemoveInTangentDirection[0]*object1.invMass/totalInvMass;
-            object1.velocity[1]-=velocityToRemoveInTangentDirection[1]*object1.invMass/totalInvMass;
-            object2.velocity[0]+=velocityToRemoveInTangentDirection[0]*object2.invMass/totalInvMass;
-            object2.velocity[1]+=velocityToRemoveInTangentDirection[1]*object2.invMass/totalInvMass;
+            object1.velocity[0]+=contactNormal[1]*frictionImpulse*object1.invMass;
+            object1.velocity[1]-=contactNormal[0]*frictionImpulse*object1.invMass;
+            object2.velocity[0]-=contactNormal[1]*frictionImpulse*object2.invMass;
+            object2.velocity[1]+=contactNormal[0]*frictionImpulse*object2.invMass;
 
-            //impact of torque (rough!)
-            object1.angVel-= speedDifferenceInTangentDirection*fractionToRemove / object1.radius;   //what to put here? basically radius because torque, but
-                //divided by rotational inertia, which scales with radius, so really this might be 1/rad^3...
-            object2.angVel-= speedDifferenceInTangentDirection*fractionToRemove / object2.radius;
+            //impact of torque. TODO check signs?
+            object1.angVel-= frictionImpulse*invMomentOfInertia1*object1.radius;
+            object2.angVel-= frictionImpulse*invMomentOfInertia2*object2.radius;
 
             function updateSpeedForObject(theObject){
                 var velInMovingFrame = [
