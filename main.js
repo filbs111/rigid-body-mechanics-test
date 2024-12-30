@@ -14,7 +14,7 @@ var physTimeToCatchUp = 0;
 var maxIterationsPerDraw = 10;
 var friction_mu = 0.1;   //coefficient of friction. for now just have same for all object (pairs), and static, sliding friction same
                             //NOTE does not handle this being zero!
-var standardCor = 0.5;
+var standardCor = 0.05;
 var physicsObjects = [];
 
 //TODO use classes ! 
@@ -749,35 +749,7 @@ function updateAndRender(timestamp){
 
         //collide with level box.
         physicsObjects.forEach((x) => {
-
-            if (x.objType == "rect"){
-                //select collision method using if. this could be neater - could have a collision 
-                // method defined for each object type (interface, implementation...)
-
-                var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)].map(Math.abs);
-
-                var rotatedShapeBounds = [
-                    x.sideHalfEdges[0]*cxsx[0] + x.sideHalfEdges[1]*cxsx[1],
-                    x.sideHalfEdges[1]*cxsx[0] + x.sideHalfEdges[0]*cxsx[1]
-                ];
-
-                if (x.position[0]< rotatedShapeBounds[0] && x.velocity[0] <0 ){
-                    x.position[0]= rotatedShapeBounds[0];
-                    x.velocity[0]=-x.velocity[0]*x.cor;
-                }
-                if (x.position[1] < rotatedShapeBounds[1] && x.velocity[1] <0 ){
-                    x.position[1]= rotatedShapeBounds[1];
-                    x.velocity[1]=-x.velocity[1]*x.cor;
-                }
-                if (x.position[0]> canvas_width -rotatedShapeBounds[0] && x.velocity[0] >0 ){
-                    x.position[0]= canvas_width -rotatedShapeBounds[0];
-                    x.velocity[0]= -x.velocity[0]*x.cor;
-                }
-                if (x.position[1]> canvas_height -rotatedShapeBounds[1] && x.velocity[1] >0 ){
-                    x.position[1]= canvas_height -rotatedShapeBounds[1];
-                    x.velocity[1]= -x.velocity[1]*x.cor;
-                }
-            }else if (x.objType == "circle"){
+            if (x.objType == "circle"){
                 if (x.position[0]< x.radius && x.velocity[0] <0 ){
                     x.position[0]= x.radius;
                     levelCollideFrictionForCircle(1, -1);
@@ -817,7 +789,7 @@ function updateAndRender(timestamp){
                     }
                 }
 
-            }else if (x.objType == "chull"){
+            }else{  // chull or rect
                 var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)];
                 var transformedPoints = x.points.map(p =>
                     [
@@ -826,10 +798,6 @@ function updateAndRender(timestamp){
                     ]
                 );
 
-                // var minx=transformedPoints.map(x=>x[0]).reduce(Math.min, Number.MAX_VALUE);
-                // var miny=transformedPoints.map(x=>x[1]).reduce(Math.min, Number.MAX_VALUE);
-                // var maxx=transformedPoints.map(x=>x[0]).reduce(Math.max, Number.MIN_VALUE);
-                // var maxy=transformedPoints.map(x=>x[1]).reduce(Math.max, Number.MIN_VALUE);  //why can't just do this?
                 var minx=transformedPoints.map(x=>x[0]).reduce((a,b) => Math.min(a,b), Number.MAX_VALUE);
                 var miny=transformedPoints.map(x=>x[1]).reduce((a,b) => Math.min(a,b), Number.MAX_VALUE);
                 var maxx=transformedPoints.map(x=>x[0]).reduce((a,b) => Math.max(a,b), Number.MIN_VALUE);
@@ -847,10 +815,49 @@ function updateAndRender(timestamp){
                     x.position[0]-= maxx-canvas_width;
                     x.velocity[0]= -x.velocity[0]*x.cor;
                 }
-                if (maxy> canvas_height && x.velocity[1] >0 ){
-                    x.position[1]-= maxy-canvas_height;
-                    x.velocity[1]= -x.velocity[1]*x.cor;
+
+                // //floor
+                if (maxy>canvas_height){
+                     x.position[1]-= maxy-canvas_height;
+
+                    //find which point, (if any), is colliding.
+                    var maxyval = Number.MIN_VALUE;
+                    var selectedPoint = -1;
+                    for (var ii=0;ii<x.points.length;ii++){
+                        var currentTransformedPoint =transformedPoints[ii];
+                        var pointDownwardSpeed = x.velocity[1]+ (currentTransformedPoint[0]-x.position[0])*x.angVel;
+                        if (currentTransformedPoint[1]>maxyval && pointDownwardSpeed>0){
+                            maxyval = currentTransformedPoint[1];
+                            selectedPoint = ii;
+                        }
+                    }
+
+                    if (selectedPoint!=-1){
+                        //apply impulse appropriate for no friction.
+
+                        var transformedPoint = transformedPoints[selectedPoint];
+                        var pointDownwardSpeed = x.velocity[1]+ (transformedPoint[0]-x.position[0])*x.angVel;
+                            //TODO save this result from earlier? 
+                        var speedChangeToApply = (1+x.cor)*pointDownwardSpeed;
+
+                        var invMomentOfInertia = x.objType == "chull" ? 0.0000005   //TODO correct value
+                                : x.invMass*3/(x.sideHalfEdges[0]*x.sideHalfEdges[0] + x.sideHalfEdges[1]*x.sideHalfEdges[1]); 
+                                //TODO use correct multiplier for rectanglar plate
+                        var leverDistance = transformedPoint[0] - x.position[0];
+
+                        var rotationalInvMass = invMomentOfInertia*(leverDistance*leverDistance);
+                        var effectiveInvMass = x.invMass + rotationalInvMass;
+                        var normalImpulse = speedChangeToApply/effectiveInvMass;
+
+                        //console.log({transformedPoint,pointDownwardSpeed,speedChangeToApply,effectiveInvMass,normalImpulse});
+
+                        x.velocity[1]-= x.invMass * normalImpulse;
+
+                        //apply torque
+                        x.angVel-= leverDistance*normalImpulse*invMomentOfInertia;
+                    }
                 }
+
             }
             
         });
@@ -864,7 +871,8 @@ function updateAndRender(timestamp){
         }
 
         //apply gravity.
-        var gravDirection = (0.001*timestamp) % (2*Math.PI);
+        //var gravDirection = (0.0005*timestamp) % (2*Math.PI);
+        var gravDirection=Math.PI/2;
         physicsObjects.forEach((x) => {
             if (x.invDensity!=0){
                 x.velocity[0]+=0.01*Math.cos(gravDirection);
