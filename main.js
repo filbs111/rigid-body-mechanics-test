@@ -803,6 +803,11 @@ function updateAndRender(timestamp){
                 var maxx=transformedPoints.map(x=>x[0]).reduce((a,b) => Math.max(a,b), Number.MIN_VALUE);
                 var maxy=transformedPoints.map(x=>x[1]).reduce((a,b) => Math.max(a,b), Number.MIN_VALUE);
 
+                //TODO precalc and store on object.
+                var invMomentOfInertia = x.objType == "chull" ? 0.0000005   //TODO correct value
+                    : x.invMass*3/(x.sideHalfEdges[0]*x.sideHalfEdges[0] + x.sideHalfEdges[1]*x.sideHalfEdges[1]); 
+                    //TODO use correct multiplier for rectanglar plate
+
                 if (minx<0 && x.velocity[0] <0 ){
                     x.position[0]-=minx;
                     x.velocity[0]=-x.velocity[0]*x.cor;
@@ -813,7 +818,41 @@ function updateAndRender(timestamp){
                 }
                 if (maxx> canvas_width && x.velocity[0] >0 ){
                     x.position[0]-= maxx-canvas_width;
-                    x.velocity[0]= -x.velocity[0]*x.cor;
+                    //x.velocity[0]= -x.velocity[0]*x.cor;
+
+                    //find which point, (if any), is colliding.
+                    var maxxval = Number.MIN_VALUE;
+                    var selectedPoint = -1;
+                    for (var ii=0;ii<x.points.length;ii++){
+                        var currentTransformedPoint =transformedPoints[ii];
+                        var pointRightwardSpeed = x.velocity[0]- (currentTransformedPoint[1]-x.position[1])*x.angVel;
+                        if (currentTransformedPoint[0]>maxxval && pointRightwardSpeed>0){
+                            maxxval = currentTransformedPoint[0];
+                            selectedPoint = ii;
+                        }
+                    }
+
+                    if (selectedPoint!=-1){
+                        //apply impulse appropriate for no friction.
+
+                        var transformedPoint = transformedPoints[selectedPoint];
+                        var pointRightwardSpeed = x.velocity[0]- (transformedPoint[1]-x.position[1])*x.angVel;
+                            //TODO save this result from earlier? 
+                        var speedChangeToApply = (1+x.cor)*pointRightwardSpeed;
+
+                        var leverDistance = transformedPoint[1] - x.position[1];
+
+                        var rotationalInvMass = invMomentOfInertia*(leverDistance*leverDistance);
+                        var effectiveInvMass = x.invMass + rotationalInvMass;
+                        var normalImpulse = speedChangeToApply/effectiveInvMass;
+
+                        //console.log({transformedPoint,pointDownwardSpeed,speedChangeToApply,effectiveInvMass,normalImpulse});
+
+                        x.velocity[0]-= x.invMass * normalImpulse;
+
+                        //apply torque
+                        x.angVel+= leverDistance*normalImpulse*invMomentOfInertia;
+                    }
                 }
 
                 // //floor
@@ -872,7 +911,7 @@ function updateAndRender(timestamp){
 
         //apply gravity.
         //var gravDirection = (0.0005*timestamp) % (2*Math.PI);
-        var gravDirection=Math.PI/2;
+        var gravDirection=0;    //Math.PI/2;
         physicsObjects.forEach((x) => {
             if (x.invDensity!=0){
                 x.velocity[0]+=0.01*Math.cos(gravDirection);
