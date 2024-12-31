@@ -386,40 +386,40 @@ function processPossibleCollisionCircleChull(circle, chull){
     }
 
     //copypaste of circle-rect!
-    function doCollision(pentetrationVectorInRotatedFrame){
+    function doCollision(penetrationVectorInRotatedFrame){
         
-        var pentetrationVector = [
-            cxsx[0] * pentetrationVectorInRotatedFrame[0] - cxsx[1] * pentetrationVectorInRotatedFrame[1],
-            cxsx[0] * pentetrationVectorInRotatedFrame[1] + cxsx[1] * pentetrationVectorInRotatedFrame[0],
+        var penetrationVector = [
+            cxsx[0] * penetrationVectorInRotatedFrame[0] - cxsx[1] * penetrationVectorInRotatedFrame[1],
+            cxsx[0] * penetrationVectorInRotatedFrame[1] + cxsx[1] * penetrationVectorInRotatedFrame[0],
         ];
 
         //move shapes apart by this vector
         var totalInvMass = object1.invMass + object2.invMass;
-        object1.position[0] -= object1.invMass/totalInvMass * pentetrationVector[0];
-        object1.position[1] -= object1.invMass/totalInvMass * pentetrationVector[1];
-        object2.position[0] += object2.invMass/totalInvMass * pentetrationVector[0];
-        object2.position[1] += object2.invMass/totalInvMass * pentetrationVector[1];
+        object1.position[0] -= object1.invMass/totalInvMass * penetrationVector[0];
+        object1.position[1] -= object1.invMass/totalInvMass * penetrationVector[1];
+        object2.position[0] += object2.invMass/totalInvMass * penetrationVector[0];
+        object2.position[1] += object2.invMass/totalInvMass * penetrationVector[1];
 
-        if (dotProd(velocityDifference, pentetrationVector)<0){return;}        
+        if (dotProd(velocityDifference, penetrationVector)<0){return;}
 
         //impart impulse along this direction
-        var separationSq = vectorLengthSq(pentetrationVector);
+        var separationSq = vectorLengthSq(penetrationVector);
 
         var cOfMVelocity = [
             (object1.velocity[0]*object2.invMass + object2.velocity[0]*object1.invMass)/(object1.invMass+ object2.invMass),
             (object1.velocity[1]*object2.invMass + object2.velocity[1]*object1.invMass)/(object1.invMass+ object2.invMass)
             ];
             
-        //NOTE This is a copy paste from circle-circle collision. positionDifference is swapped out for pentetrationVector. TODO dedupe!
+        //NOTE This is a copy paste from circle-circle collision. positionDifference is swapped out for penetrationVector. TODO dedupe!
 
         updateSpeedForObject(object1);
         updateSpeedForObject(object2);
 
 
         //friction
-        //this is a copy paste of CircleCircle code, but with pentetrationVector instead of positionDifference
+        //this is a copy paste of CircleCircle code, but with penetrationVector instead of positionDifference
         var currentSeparation = Math.sqrt(separationSq);
-        var contactNormal = pentetrationVector.map(x=>x/currentSeparation);
+        var contactNormal = penetrationVector.map(x=>x/currentSeparation);
         var speedDifferenceAlongNormal = dotProd(contactNormal, velocityDifference);
         var velocityInTangentDirection = [
             velocityDifference[0] - speedDifferenceAlongNormal*contactNormal[0],
@@ -442,10 +442,10 @@ function processPossibleCollisionCircleChull(circle, chull){
         function updateSpeedForObject(theObject){
             var velInMovingFrame = vectorDifference(theObject.velocity, cOfMVelocity);
             
-            var mulltiplier1 = dotProd(velInMovingFrame, pentetrationVector)/separationSq;
+            var mulltiplier1 = dotProd(velInMovingFrame, penetrationVector)/separationSq;
 
             var velInMovingFrameComponentAlongReactionNormal = 
-                [pentetrationVector[0]*mulltiplier1, pentetrationVector[1]*mulltiplier1];
+                [penetrationVector[0]*mulltiplier1, penetrationVector[1]*mulltiplier1];
 
             var perpendicularPart = vectorDifference(velInMovingFrame, velInMovingFrameComponentAlongReactionNormal);
 
@@ -520,37 +520,37 @@ function processPossibleCollisionChullChull(chull1, chull2){
         }
     }
 
-    function doCollision(pentetrationVector){
+    function doCollision(penetrationVector){
         //mostly copy/paste from elsewhere
         var cor = effectiveCor(object1, object2);
 
         //move shapes apart by this vector
         var totalInvMass = object1.invMass + object2.invMass;
-        object1.position[0] -= object1.invMass/totalInvMass * pentetrationVector[0];
-        object1.position[1] -= object1.invMass/totalInvMass * pentetrationVector[1];
-        object2.position[0] += object2.invMass/totalInvMass * pentetrationVector[0];
-        object2.position[1] += object2.invMass/totalInvMass * pentetrationVector[1];
+        object1.position[0] -= object1.invMass/totalInvMass * penetrationVector[0];
+        object1.position[1] -= object1.invMass/totalInvMass * penetrationVector[1];
+        object2.position[0] += object2.invMass/totalInvMass * penetrationVector[0];
+        object2.position[1] += object2.invMass/totalInvMass * penetrationVector[1];
 
-        var dotVecWithPenVec = dotProd(velocityDifference, pentetrationVector);
+        var dotVecWithPenVec = dotProd(velocityDifference, penetrationVector);
         if (dotVecWithPenVec<0){return;}
 
         //impart impulse along this direction
-        var separationSq = vectorLengthSq(pentetrationVector);
+        var separationSq = vectorLengthSq(penetrationVector);
 
         var cOfMVelocity = [
             (object1.velocity[0]*object2.invMass + object2.velocity[0]*object1.invMass)/totalInvMass,
             (object1.velocity[1]*object2.invMass + object2.velocity[1]*object1.invMass)/totalInvMass
             ];
             
-        //NOTE This is a copy paste from circle-circle collision. positionDifference is swapped out for pentetrationVector. TODO dedupe!
+        //NOTE This is a copy paste from circle-circle collision. positionDifference is swapped out for penetrationVector. TODO dedupe!
 
         updateSpeedForObject(object1);
         updateSpeedForObject(object2);
 
         //friction
-        //this is a copy paste of CircleCircle code, but with pentetrationVector instead of positionDifference
+        //this is a copy paste of CircleCircle code, but with penetrationVector instead of positionDifference
         var currentSeparation = Math.sqrt(separationSq);
-        var contactNormal = pentetrationVector.map(x=>x/currentSeparation);
+        var contactNormal = penetrationVector.map(x=>x/currentSeparation);
         var speedDifferenceAlongNormal = dotProd(contactNormal, velocityDifference);
         var velocityInTangentDirection = [
             velocityDifference[0] - speedDifferenceAlongNormal*contactNormal[0],
@@ -572,10 +572,10 @@ function processPossibleCollisionChullChull(chull1, chull2){
 
         function updateSpeedForObject(theObject){
             var velInMovingFrame = vectorDifference(theObject.velocity, cOfMVelocity);
-            var mulltiplier1 = dotProd(velInMovingFrame, pentetrationVector)/separationSq;
+            var mulltiplier1 = dotProd(velInMovingFrame, penetrationVector)/separationSq;
 
             var velInMovingFrameComponentAlongReactionNormal = 
-                [pentetrationVector[0]*mulltiplier1, pentetrationVector[1]*mulltiplier1];
+                [penetrationVector[0]*mulltiplier1, penetrationVector[1]*mulltiplier1];
 
             var perpendicularPart = vectorDifference(velInMovingFrame, velInMovingFrameComponentAlongReactionNormal);
 
