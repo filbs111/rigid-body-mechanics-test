@@ -17,6 +17,8 @@ var friction_mu = 0.1;   //coefficient of friction. for now just have same for a
 var standardCor = 0.05;
 var physicsObjects = [];
 
+var contactPositionsToDraw = [];
+
 //TODO use classes ! 
 function addPhysicsObject(theObject){
     var objArea = theObject.objType == "rect" ? (theObject.sideHalfEdges[0] * theObject.sideHalfEdges[1]) : Math.PI * theObject.radius * theObject.radius;
@@ -339,7 +341,8 @@ function processPossibleCollisionCircleChull(circle, chull){
 
     if (leastPenetration>0){
         if (leastPenetration>circle.radius){
-            doCollision(penNormal.map(x=>-x*leastPenetration)); //circle centre is inside convex shape
+            doCollision(penNormal.map(x=>-x*leastPenetration), positionDifferenceInRotatedFrame); //circle centre is inside convex shape
+                //take contact point to be centre of circle, which goes to surface of convex shape at limit of this if condition.
             return;
         }
 
@@ -361,8 +364,8 @@ function processPossibleCollisionCircleChull(circle, chull){
                 var distFromVert = Math.sqrt(pointRelativeToStartPointLenSq);
                 var penetration = circle.radius - distFromVert;
                 var multiplier = penetration/distFromVert;
-                console.log("x");
-                doCollision(pointRelativeToStartPoint.map(x=>-multiplier*x));
+                //console.log("x");
+                doCollision(pointRelativeToStartPoint.map(x=>-multiplier*x), startPoint);
                     //sign here is not obvious - switch it and doesn't break!
             }
             return;
@@ -375,19 +378,33 @@ function processPossibleCollisionCircleChull(circle, chull){
                 var distFromVert = Math.sqrt(pointRelativeToEndPointLenSq);
                 var penetration = circle.radius - distFromVert;
                 var multiplier = penetration/distFromVert;
-                console.log("xx");
-                doCollision(pointRelativeToEndPoint.map(x=>-multiplier*x));
+                //console.log("xx");
+                doCollision(pointRelativeToEndPoint.map(x=>-multiplier*x), endPoint);
                     //sign here is not obvious - switch it and doesn't break!
             }
             return;
         }
 
-        doCollision(penNormal.map(x=>-x*leastPenetration));
+        var contactPoint = [
+            fractionAlongEdge*endPoint[0] + (1-fractionAlongEdge)*startPoint[0],
+            fractionAlongEdge*endPoint[1] + (1-fractionAlongEdge)*startPoint[1]
+        ];
+        doCollision(penNormal.map(x=>-x*leastPenetration), contactPoint);
     }
 
     //copypaste of circle-rect!
-    function doCollision(penetrationVectorInRotatedFrame){
+    function doCollision(penetrationVectorInRotatedFrame, contactPointInRotatedFrame){
         
+        //TODO take contact point into account to apply torque, friction etc
+        //TODO draw contact point.
+
+        var contactPositionInWorldFrame = [
+            chull.position[0] + contactPointInRotatedFrame[0]*cxsx[0] - contactPointInRotatedFrame[1]*cxsx[1],
+            chull.position[1] + contactPointInRotatedFrame[1]*cxsx[0] + contactPointInRotatedFrame[0]*cxsx[1]
+        ];
+
+        contactPositionsToDraw.push(contactPositionInWorldFrame);    //TODO rotate, transform it!
+
         var penetrationVector = [
             cxsx[0] * penetrationVectorInRotatedFrame[0] - cxsx[1] * penetrationVectorInRotatedFrame[1],
             cxsx[0] * penetrationVectorInRotatedFrame[1] + cxsx[1] * penetrationVectorInRotatedFrame[0],
@@ -669,6 +686,8 @@ function updateAndRender(timestamp){
     }
     //console.log("will do " + iterationsToCatchUp + " iterations" );
 
+    contactPositionsToDraw=[];
+
     while (iterationsToCatchUp > 0){
         iterationsToCatchUp-=1;
 
@@ -874,6 +893,13 @@ function updateAndRender(timestamp){
             ctx.fill();
             ctx.stroke();
         }
+    });
+
+    ctx.strokeStyle = "black";
+    ctx.fillStyle = "#f00";
+    contactPositionsToDraw.forEach((contactPosition)=>{
+        ctx.fillRect(contactPosition[0]-5,contactPosition[1]-5,10,10);
+        ctx.strokeRect(contactPosition[0]-5,contactPosition[1]-5,10,10);
     });
 }
 
