@@ -47,7 +47,7 @@ function addPhysicsObject(theObject){
         for (var ii=0;ii<points.length;ii++){
             var point = points[ii];
             var differenceVec = vectorDifference(point, lastpoint);
-            var differenceLen = Math.sqrt(dotProd(differenceVec, differenceVec));
+            var differenceLen = Math.sqrt(vectorLengthSq(differenceVec));
             var normal = [-differenceVec[1],differenceVec[0]].map(x=>x/differenceLen);
             edges.push({
                 dir: normal,
@@ -188,7 +188,7 @@ function processPossibleCollisionCircleCircle(object1, object2){
     var positionDifference = vectorDifference(object1.position, object2.position);
     var velocityDifference = vectorDifference(object1.velocity, object2.velocity);
 
-    var separationSq = dotProd(positionDifference, positionDifference);
+    var separationSq = vectorLengthSq(positionDifference);
     var totalRad = object1.radius + object2.radius;
     var touchingDistanceSq = totalRad * totalRad;
 
@@ -346,7 +346,7 @@ function processPossibleCollisionCircleChull(circle, chull){
             endPoint[0] - startPoint[0],
             endPoint[1] - startPoint[1]
         ];
-        var alongEdgeVecLenSq = dotProd(alongEdgeVec, alongEdgeVec);
+        var alongEdgeVecLenSq = vectorLengthSq(alongEdgeVec);
         var pointRelativeToStartPoint = vectorDifference(positionDifferenceInRotatedFrame, startPoint); //in rotated frame
         var pointRelativeToEndPoint = vectorDifference(positionDifferenceInRotatedFrame, endPoint);
         var fractionAlongEdge = dotProd(pointRelativeToStartPoint, alongEdgeVec)/alongEdgeVecLenSq;
@@ -354,7 +354,7 @@ function processPossibleCollisionCircleChull(circle, chull){
         //console.log(fractionAlongEdge);
 
         if (fractionAlongEdge<0){
-            var pointRelativeToStartPointLenSq = dotProd(pointRelativeToStartPoint, pointRelativeToStartPoint);
+            var pointRelativeToStartPointLenSq = vectorLengthSq(pointRelativeToStartPoint);
 
             if (pointRelativeToStartPointLenSq < circle.radius*circle.radius){
                 var distFromVert = Math.sqrt(pointRelativeToStartPointLenSq);
@@ -368,7 +368,7 @@ function processPossibleCollisionCircleChull(circle, chull){
         }
       
         if(fractionAlongEdge>1){
-            var pointRelativeToEndPointLenSq = dotProd(pointRelativeToEndPoint, pointRelativeToEndPoint);
+            var pointRelativeToEndPointLenSq = vectorLengthSq(pointRelativeToEndPoint);
 
             if (pointRelativeToEndPointLenSq < circle.radius*circle.radius){
                 var distFromVert = Math.sqrt(pointRelativeToEndPointLenSq);
@@ -402,7 +402,7 @@ function processPossibleCollisionCircleChull(circle, chull){
         if (dotProd(velocityDifference, pentetrationVector)<0){return;}        
 
         //impart impulse along this direction
-        var separationSq = dotProd(pentetrationVector, pentetrationVector);
+        var separationSq = vectorLengthSq(pentetrationVector);
 
         var cOfMVelocity = [
             (object1.velocity[0]*object2.invMass + object2.velocity[0]*object1.invMass)/(object1.invMass+ object2.invMass),
@@ -424,7 +424,7 @@ function processPossibleCollisionCircleChull(circle, chull){
             velocityDifference[0] - speedDifferenceAlongNormal*contactNormal[0],
             velocityDifference[1] - speedDifferenceAlongNormal*contactNormal[1]
         ];
-        var speedDifferenceInTangentDirection = Math.sqrt(dotProd(velocityInTangentDirection, velocityInTangentDirection));
+        var speedDifferenceInTangentDirection = Math.sqrt(vectorLengthSq(velocityInTangentDirection));
 
         var fractionToRemove = Math.min(1, Math.abs(speedDifferenceAlongNormal)*friction_mu/speedDifferenceInTangentDirection);
             //is abs required? TODO handle speed=zero
@@ -534,7 +534,7 @@ function processPossibleCollisionChullChull(chull1, chull2){
         if (dotVecWithPenVec<0){return;}
 
         //impart impulse along this direction
-        var separationSq = dotProd(pentetrationVector, pentetrationVector);
+        var separationSq = vectorLengthSq(pentetrationVector);
 
         var cOfMVelocity = [
             (object1.velocity[0]*object2.invMass + object2.velocity[0]*object1.invMass)/(object1.invMass+ object2.invMass),
@@ -555,7 +555,7 @@ function processPossibleCollisionChullChull(chull1, chull2){
             velocityDifference[0] - speedDifferenceAlongNormal*contactNormal[0],
             velocityDifference[1] - speedDifferenceAlongNormal*contactNormal[1]
         ];
-        var speedDifferenceInTangentDirection = Math.sqrt(dotProd(velocityInTangentDirection, velocityInTangentDirection));
+        var speedDifferenceInTangentDirection = Math.sqrt(vectorLengthSq(velocityInTangentDirection));
 
         var fractionToRemove = Math.min(1, Math.abs(speedDifferenceAlongNormal)*friction_mu/speedDifferenceInTangentDirection);
             //is abs required? TODO handle speed=zero
@@ -881,6 +881,9 @@ function updateAndRender(timestamp){
     });
 }
 
+function vectorLengthSq(vec1){
+    return dotProd(vec1, vec1);
+}
 function dotProd(vec1, vec2){
     return vec1[0]*vec2[0] + vec1[1]*vec2[1];
 }
