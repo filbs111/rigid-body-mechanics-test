@@ -47,7 +47,7 @@ function addPhysicsObject(theObject){
         for (var ii=0;ii<points.length;ii++){
             var point = points[ii];
             var differenceVec = vectorDifference(point, lastpoint);
-            var differenceLen = Math.sqrt(vectorLengthSq(differenceVec));
+            var differenceLen = vectorLength(differenceVec);
             var normal = [-differenceVec[1],differenceVec[0]].map(x=>x/differenceLen);
             edges.push({
                 dir: normal,
@@ -424,7 +424,7 @@ function processPossibleCollisionCircleChull(circle, chull){
             velocityDifference[0] - speedDifferenceAlongNormal*contactNormal[0],
             velocityDifference[1] - speedDifferenceAlongNormal*contactNormal[1]
         ];
-        var speedDifferenceInTangentDirection = Math.sqrt(vectorLengthSq(velocityInTangentDirection));
+        var speedDifferenceInTangentDirection = vectorLength(velocityInTangentDirection);
 
         var fractionToRemove = Math.min(1, Math.abs(speedDifferenceAlongNormal)*friction_mu/speedDifferenceInTangentDirection);
             //is abs required? TODO handle speed=zero
@@ -555,7 +555,7 @@ function processPossibleCollisionChullChull(chull1, chull2){
             velocityDifference[0] - speedDifferenceAlongNormal*contactNormal[0],
             velocityDifference[1] - speedDifferenceAlongNormal*contactNormal[1]
         ];
-        var speedDifferenceInTangentDirection = Math.sqrt(vectorLengthSq(velocityInTangentDirection));
+        var speedDifferenceInTangentDirection = vectorLength(velocityInTangentDirection);
 
         var fractionToRemove = Math.min(1, Math.abs(speedDifferenceAlongNormal)*friction_mu/speedDifferenceInTangentDirection);
             //is abs required? TODO handle speed=zero
@@ -881,6 +881,9 @@ function updateAndRender(timestamp){
     });
 }
 
+function vectorLength(vec1){
+    return Math.sqrt(vectorLengthSq(vec1));
+}
 function vectorLengthSq(vec1){
     return dotProd(vec1, vec1);
 }
