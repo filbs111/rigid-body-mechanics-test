@@ -840,11 +840,9 @@ function updateAndRender(timestamp){
                     var selectedPoint = -1;
                     for (var ii=0;ii<x.points.length;ii++){
                         var currentTransformedPoint =transformedPoints[ii];
-                        var pointTowardsWallSpeed = x.velocity[0]*wallOutwardNormal[0] + x.velocity[1]*wallOutwardNormal[1]
-                            + (tangentDirection[0] * (currentTransformedPoint[0]-x.position[0])
-                            + tangentDirection[1] * (currentTransformedPoint[1]-x.position[1]))*x.angVel;
-                        var distanceInWallDirection = wallOutwardNormal[0]*currentTransformedPoint[0] +
-                                                    wallOutwardNormal[1]*currentTransformedPoint[1];
+                        var leverDistance = dotProd(tangentDirection, vectorDifference(currentTransformedPoint, x.position ));
+                        var pointTowardsWallSpeed = dotProd(x.velocity, wallOutwardNormal) + leverDistance*x.angVel;
+                        var distanceInWallDirection = dotProd(wallOutwardNormal, currentTransformedPoint);
                         if (distanceInWallDirection>maxDepthInWall && pointTowardsWallSpeed>0){
                             maxDepthInWall = distanceInWallDirection;
                             selectedPoint = ii;
@@ -854,14 +852,10 @@ function updateAndRender(timestamp){
                     if (maxDepthInWall>wallDistanceFromOriginInNormalDirection && selectedPoint!=-1){
                         //apply impulse appropriate for no friction.
                         var transformedPoint = transformedPoints[selectedPoint];
-                        var pointTowardsWallSpeed = x.velocity[0]*wallOutwardNormal[0] + x.velocity[1]*wallOutwardNormal[1]
-                            + (tangentDirection[0] * (transformedPoint[0]-x.position[0])
-                            + tangentDirection[1] * (transformedPoint[1]-x.position[1]))*x.angVel;
+                        var leverDistance = dotProd(tangentDirection, vectorDifference(transformedPoint, x.position ));
+                        var pointTowardsWallSpeed = dotProd(x.velocity, wallOutwardNormal) + leverDistance*x.angVel;
                             //TODO save this result from earlier? 
                         var speedChangeToApply = (1+x.cor)*pointTowardsWallSpeed;
-
-                        var leverDistance = (transformedPoint[0] - x.position[0])*tangentDirection[0] + 
-                                            (transformedPoint[1] - x.position[1])*tangentDirection[1];
 
                         var rotationalInvMass = invMomentOfInertia*(leverDistance*leverDistance);
                         var effectiveInvMass = x.invMass + rotationalInvMass;
@@ -947,3 +941,9 @@ function updateAndRender(timestamp){
     });
 }
 
+function dotProd(vec1, vec2){
+    return vec1[0]*vec2[0] + vec1[1]*vec2[1];
+}
+function vectorDifference(vec1, vec2){
+    return [vec1[0]-vec2[0], vec1[1]-vec2[1]];
+}
