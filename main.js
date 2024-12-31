@@ -59,6 +59,10 @@ function addPhysicsObject(theObject){
         theObject.edges=edges;
     }
 
+    if (theObject.objType == "circle"){
+        theObject.radsq = theObject.radius*theObject.radius;
+    }
+
     theObject.angVel = 0;
 
     physicsObjects.push(theObject);
@@ -255,10 +259,10 @@ function processPossibleCollisionCircleCircle(object1, object2){
 
             var normalImpulse = speedDifferenceAlongNormal*(1+cor)/totalInvMass;
 
-            var invMomentOfInertia1 = 1/(object1.radius*object1.radius);    //TODO calculate this properly
-            var invMomentOfInertia2 = 1/(object2.radius*object2.radius);    //""
+            var invMomentOfInertia1 = 1/(object1.radsq);    //TODO calculate this properly
+            var invMomentOfInertia2 = 1/(object2.radsq);    //""
 
-            var effectiveInvMassForTangentDirection = totalInvMass + invMomentOfInertia1*object1.radius*object1.radius + invMomentOfInertia2*object2.radius*object2.radius;
+            var effectiveInvMassForTangentDirection = totalInvMass + invMomentOfInertia1*object1.radsq + invMomentOfInertia2*object2.radsq;
             var impulseRequiredToStop = speedDifferenceInTangentDirection/effectiveInvMassForTangentDirection;
 
             var frictionImpulse = impulseRequiredToStop*Math.min(1, friction_mu* Math.abs(normalImpulse/impulseRequiredToStop));
@@ -356,7 +360,7 @@ function processPossibleCollisionCircleChull(circle, chull){
         if (fractionAlongEdge<0){
             var pointRelativeToStartPointLenSq = vectorLengthSq(pointRelativeToStartPoint);
 
-            if (pointRelativeToStartPointLenSq < circle.radius*circle.radius){
+            if (pointRelativeToStartPointLenSq < circle.radsq){
                 var distFromVert = Math.sqrt(pointRelativeToStartPointLenSq);
                 var penetration = circle.radius - distFromVert;
                 var multiplier = penetration/distFromVert;
@@ -370,7 +374,7 @@ function processPossibleCollisionCircleChull(circle, chull){
         if(fractionAlongEdge>1){
             var pointRelativeToEndPointLenSq = vectorLengthSq(pointRelativeToEndPoint);
 
-            if (pointRelativeToEndPointLenSq < circle.radius*circle.radius){
+            if (pointRelativeToEndPointLenSq < circle.radsq){
                 var distFromVert = Math.sqrt(pointRelativeToEndPointLenSq);
                 var penetration = circle.radius - distFromVert;
                 var multiplier = penetration/distFromVert;
@@ -714,8 +718,8 @@ function updateAndRender(timestamp){
 
                     var surfaceVelocity = x.velocity[frictionDimensionIndex] + sign*x.radius*x.angVel;
                     //apply implulse up to limit determined by coefficient of friction, that will change surface veclocity to zero.
-                    var invMomentOfInertia = 1/(x.radius*x.radius);    //TODO choose something sensible for this (disc? ball? suspect want 1/r^3, or 1/r^4...)
-                    var effectiveInvMass = x.invMass + invMomentOfInertia*x.radius*x.radius;  //AFAIK this part is good.
+                    var invMomentOfInertia = 1/x.radsq;    //TODO choose something sensible for this (disc? ball? suspect want 1/r^3, or 1/r^4...)
+                    var effectiveInvMass = x.invMass + invMomentOfInertia*x.radsq;  //AFAIK this part is good.
                     var impulseRequiredToStop = surfaceVelocity/effectiveInvMass;
 
                     if (impulseRequiredToStop!=0){
