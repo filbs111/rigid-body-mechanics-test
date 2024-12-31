@@ -346,10 +346,7 @@ function processPossibleCollisionCircleChull(circle, chull){
         var endPoint = chull.points[collidingEdgeIdx];
         var startPoint = chull.points[(collidingEdgeIdx+chull.points.length-1)%chull.points.length];  //because js % is strange
 
-        var alongEdgeVec = [  //TODO store edge vec instead of recalculating?
-            endPoint[0] - startPoint[0],
-            endPoint[1] - startPoint[1]
-        ];
+        var alongEdgeVec = vectorDifference(endPoint, startPoint);  //TODO store edge vec instead of recalculating?
         var alongEdgeVecLenSq = vectorLengthSq(alongEdgeVec);
         var pointRelativeToStartPoint = vectorDifference(positionDifferenceInRotatedFrame, startPoint); //in rotated frame
         var pointRelativeToEndPoint = vectorDifference(positionDifferenceInRotatedFrame, endPoint);
@@ -541,8 +538,8 @@ function processPossibleCollisionChullChull(chull1, chull2){
         var separationSq = vectorLengthSq(pentetrationVector);
 
         var cOfMVelocity = [
-            (object1.velocity[0]*object2.invMass + object2.velocity[0]*object1.invMass)/(object1.invMass+ object2.invMass),
-            (object1.velocity[1]*object2.invMass + object2.velocity[1]*object1.invMass)/(object1.invMass+ object2.invMass)
+            (object1.velocity[0]*object2.invMass + object2.velocity[0]*object1.invMass)/totalInvMass,
+            (object1.velocity[1]*object2.invMass + object2.velocity[1]*object1.invMass)/totalInvMass
             ];
             
         //NOTE This is a copy paste from circle-circle collision. positionDifference is swapped out for pentetrationVector. TODO dedupe!
@@ -574,13 +571,8 @@ function processPossibleCollisionChullChull(chull1, chull2){
 
 
         function updateSpeedForObject(theObject){
-            var velInMovingFrame = [
-                theObject.velocity[0]- cOfMVelocity[0],
-                theObject.velocity[1]- cOfMVelocity[1]
-            ];
-
-            var mulltiplier1 = (velInMovingFrame[0]*pentetrationVector[0] + velInMovingFrame[1]*pentetrationVector[1])
-                    /separationSq;
+            var velInMovingFrame = vectorDifference(theObject.velocity, cOfMVelocity);
+            var mulltiplier1 = dotProd(velInMovingFrame, pentetrationVector)/separationSq;
 
             var velInMovingFrameComponentAlongReactionNormal = 
                 [pentetrationVector[0]*mulltiplier1, pentetrationVector[1]*mulltiplier1];
