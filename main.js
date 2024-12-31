@@ -810,91 +810,72 @@ function updateAndRender(timestamp){
 
                 if (minx<0 && x.velocity[0] <0 ){
                     x.position[0]-=minx;
-                    x.velocity[0]=-x.velocity[0]*x.cor;
+                    collideWithWall([-1,0],0);
                 }
+
+                //ceiling
                 if (miny<0 && x.velocity[1] <0 ){
                     x.position[1]-=miny;
-                    x.velocity[1]=-x.velocity[1]*x.cor;
+                    collideWithWall([0,-1],0);
                 }
-                if (maxx> canvas_width && x.velocity[0] >0 ){
+
+
+                if (maxx> canvas_width){
                     x.position[0]-= maxx-canvas_width;
-                    //x.velocity[0]= -x.velocity[0]*x.cor;
-
-                    //find which point, (if any), is colliding.
-                    var maxxval = Number.MIN_VALUE;
-                    var selectedPoint = -1;
-                    for (var ii=0;ii<x.points.length;ii++){
-                        var currentTransformedPoint =transformedPoints[ii];
-                        var pointRightwardSpeed = x.velocity[0]- (currentTransformedPoint[1]-x.position[1])*x.angVel;
-                        if (currentTransformedPoint[0]>maxxval && pointRightwardSpeed>0){
-                            maxxval = currentTransformedPoint[0];
-                            selectedPoint = ii;
-                        }
-                    }
-
-                    if (selectedPoint!=-1){
-                        //apply impulse appropriate for no friction.
-
-                        var transformedPoint = transformedPoints[selectedPoint];
-                        var pointRightwardSpeed = x.velocity[0]- (transformedPoint[1]-x.position[1])*x.angVel;
-                            //TODO save this result from earlier? 
-                        var speedChangeToApply = (1+x.cor)*pointRightwardSpeed;
-
-                        var leverDistance = transformedPoint[1] - x.position[1];
-
-                        var rotationalInvMass = invMomentOfInertia*(leverDistance*leverDistance);
-                        var effectiveInvMass = x.invMass + rotationalInvMass;
-                        var normalImpulse = speedChangeToApply/effectiveInvMass;
-
-                        //console.log({transformedPoint,pointDownwardSpeed,speedChangeToApply,effectiveInvMass,normalImpulse});
-
-                        x.velocity[0]-= x.invMass * normalImpulse;
-
-                        //apply torque
-                        x.angVel+= leverDistance*normalImpulse*invMomentOfInertia;
-                    }
+                    collideWithWall([1,0],canvas_width);
                 }
 
                 // //floor
                 if (maxy>canvas_height){
                      x.position[1]-= maxy-canvas_height;
+                     collideWithWall([0,1],canvas_height);
+                }
+
+                function collideWithWall(wallOutwardNormal, wallDistanceFromOriginInNormalDirection){
+
+                    var tangentDirection = [wallOutwardNormal[1],-wallOutwardNormal[0]];
 
                     //find which point, (if any), is colliding.
-                    var maxyval = Number.MIN_VALUE;
+                    var maxDepthInWall = Number.MIN_VALUE;
                     var selectedPoint = -1;
                     for (var ii=0;ii<x.points.length;ii++){
                         var currentTransformedPoint =transformedPoints[ii];
-                        var pointDownwardSpeed = x.velocity[1]+ (currentTransformedPoint[0]-x.position[0])*x.angVel;
-                        if (currentTransformedPoint[1]>maxyval && pointDownwardSpeed>0){
-                            maxyval = currentTransformedPoint[1];
+                        var pointTowardsWallSpeed = x.velocity[0]*wallOutwardNormal[0] + x.velocity[1]*wallOutwardNormal[1]
+                            + (tangentDirection[0] * (currentTransformedPoint[0]-x.position[0])
+                            + tangentDirection[1] * (currentTransformedPoint[1]-x.position[1]))*x.angVel;
+                        var distanceInWallDirection = wallOutwardNormal[0]*currentTransformedPoint[0] +
+                                                    wallOutwardNormal[1]*currentTransformedPoint[1];
+                        if (distanceInWallDirection>maxDepthInWall && pointTowardsWallSpeed>0){
+                            maxDepthInWall = distanceInWallDirection;
                             selectedPoint = ii;
                         }
                     }
 
-                    if (selectedPoint!=-1){
+                    if (maxDepthInWall>wallDistanceFromOriginInNormalDirection && selectedPoint!=-1){
                         //apply impulse appropriate for no friction.
-
                         var transformedPoint = transformedPoints[selectedPoint];
-                        var pointDownwardSpeed = x.velocity[1]+ (transformedPoint[0]-x.position[0])*x.angVel;
+                        var pointTowardsWallSpeed = x.velocity[0]*wallOutwardNormal[0] + x.velocity[1]*wallOutwardNormal[1]
+                            + (tangentDirection[0] * (transformedPoint[0]-x.position[0])
+                            + tangentDirection[1] * (transformedPoint[1]-x.position[1]))*x.angVel;
                             //TODO save this result from earlier? 
-                        var speedChangeToApply = (1+x.cor)*pointDownwardSpeed;
+                        var speedChangeToApply = (1+x.cor)*pointTowardsWallSpeed;
 
-                        var invMomentOfInertia = x.objType == "chull" ? 0.0000005   //TODO correct value
-                                : x.invMass*3/(x.sideHalfEdges[0]*x.sideHalfEdges[0] + x.sideHalfEdges[1]*x.sideHalfEdges[1]); 
-                                //TODO use correct multiplier for rectanglar plate
-                        var leverDistance = transformedPoint[0] - x.position[0];
+                        var leverDistance = (transformedPoint[0] - x.position[0])*tangentDirection[0] + 
+                                            (transformedPoint[1] - x.position[1])*tangentDirection[1];
 
                         var rotationalInvMass = invMomentOfInertia*(leverDistance*leverDistance);
                         var effectiveInvMass = x.invMass + rotationalInvMass;
                         var normalImpulse = speedChangeToApply/effectiveInvMass;
 
-                        //console.log({transformedPoint,pointDownwardSpeed,speedChangeToApply,effectiveInvMass,normalImpulse});
+                        //console.log({transformedPoint,pointTowardsWallSpeed,speedChangeToApply,effectiveInvMass,normalImpulse});
 
-                        x.velocity[1]-= x.invMass * normalImpulse;
+                        x.velocity[0]-= x.invMass * normalImpulse * wallOutwardNormal[0];
+                        x.velocity[1]-= x.invMass * normalImpulse * wallOutwardNormal[1];
 
                         //apply torque
                         x.angVel-= leverDistance*normalImpulse*invMomentOfInertia;
                     }
+
                 }
 
             }
