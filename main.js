@@ -75,10 +75,10 @@ addPhysicsObject({
     rotation: -0.2+Math.PI,
     velocity: [0.3,1],
     objType: "rect",
-    sideHalfEdges: [20,30],
+    sideHalfEdges: [20,15],
     cor: standardCor,
     invDensity: 1,
-    fillStyle: "red"
+    fillStyle: "white"
 });
 addPhysicsObject({
     position: [210,30],
@@ -713,6 +713,47 @@ document.getElementById("stepButton").addEventListener("click", evt => {
     physTimeToCatchUp+= physStepTime;
 });
 
+var currentKeyPresses={
+    left:false,
+    right:false,
+    up:false,
+    down:false
+};
+
+document.addEventListener("keydown", e => {
+    switch (e.keyCode) {
+        case 37:
+            currentKeyPresses.left=true;
+            break;
+        case 38:
+            currentKeyPresses.up=true;
+            break;
+        case 39:
+            currentKeyPresses.right=true;
+            break;
+        case 40:
+            currentKeyPresses.down=true;
+            break;
+    }
+});
+document.addEventListener("keyup", e => {
+    switch (e.keyCode) {
+        case 37:
+            currentKeyPresses.left=false;
+            break;
+        case 38:
+            currentKeyPresses.up=false;
+            break;
+        case 39:
+            currentKeyPresses.right=false;
+            break;
+        case 40:
+            currentKeyPresses.down=false;
+            break;
+    }
+});
+
+
 //for stepping physics engine.
 currentTime = window.performance.now();
 console.log("initial time = " + currentTime);
@@ -907,6 +948,25 @@ function updateAndRender(timestamp){
                 x.velocity[1]+=gravStrength*Math.sin(gravDirection);
             }
         });
+
+
+        //apply controls
+        var controlledObject = physicsObjects[0];
+        var thrust = 0.02;
+        if (currentKeyPresses.up){
+            controlledObject.velocity[0] += thrust*Math.cos(controlledObject.rotation);
+            controlledObject.velocity[1] += thrust*Math.sin(controlledObject.rotation);
+        }
+        if (currentKeyPresses.left){
+            controlledObject.angVel -= 0.001;
+        }
+        if (currentKeyPresses.right){
+            controlledObject.angVel += 0.001;
+        }
+        controlledObject.angVel*=0.95;
+        controlledObject.velocity[0]*=0.999;
+        controlledObject.velocity[1]*=0.999;
+
     }
     
     //update display
