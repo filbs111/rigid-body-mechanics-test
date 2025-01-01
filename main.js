@@ -2,8 +2,8 @@
 //inspired by reading 1st randy gaul article
 
 var canvas = document.getElementById("myCanvas");
-var canvas_width = 600;
-var canvas_height = 500;
+var canvas_width = 800;
+var canvas_height = 800;
 canvas.width = canvas_width;
 canvas.height = canvas_height;
 var ctx = canvas.getContext("2d");
@@ -513,15 +513,14 @@ function processPossibleCollisionChullChull(chull1, chull2){
     var velocityDifference = vectorDifference(object1.velocity, object2.velocity);
     var leastPenetration = Number.MAX_VALUE;
     var penNormal = [0,0];
+    var contactPoint;
 
     processPointsForEdges(chull1, chull2);
     penNormal = penNormal.map(x=>-x);
     processPointsForEdges(chull2, chull1);
 
     if (leastPenetration>0 && leastPenetration != Number.MAX_VALUE){
-        //do collision
-        //console.log("TODO collision");
-        doCollision(penNormal.map(x=>x*leastPenetration));
+        doCollision(penNormal.map(x=>x*leastPenetration), contactPoint);
     }
 
     function processPointsForEdges(chullForPoints, chullForEdges){
@@ -547,11 +546,15 @@ function processPossibleCollisionChullChull(chull1, chull2){
             var edge = edges[ii];
             var edgedir = edge.dir;
             var leastFarInThisDirection = Number.MAX_VALUE;
+            var pickedPoint;
             for (var jj=0;jj<transformedPoints.length;jj++){
                 //find transformed point that is least far in this direction.
                 var point = transformedPoints[jj];
                 var distInEdgeDir = dotProd(point, edgedir);
-                leastFarInThisDirection = Math.min(leastFarInThisDirection, distInEdgeDir);
+                if (distInEdgeDir<leastFarInThisDirection){
+                    leastFarInThisDirection = distInEdgeDir;
+                    pickedPoint = point;
+                }
             }
 
             var penetration = edge.howFar - leastFarInThisDirection;
@@ -562,11 +565,19 @@ function processPossibleCollisionChullChull(chull1, chull2){
                     cxsxEdges[0]*edgedir[0] - cxsxEdges[1]*edgedir[1],
                     cxsxEdges[0]*edgedir[1] + cxsxEdges[1]*edgedir[0]
                 ]
+                contactPoint = [
+                    chullForEdges.position[0] + cxsxEdges[0]*pickedPoint[0] - cxsxEdges[1]*pickedPoint[1],
+                    chullForEdges.position[1] + cxsxEdges[0]*pickedPoint[1] + cxsxEdges[1]*pickedPoint[0]
+                ];
             }
         }
     }
 
-    function doCollision(penetrationVector){
+    function doCollision(penetrationVector, contactPositionInWorldFrame){
+            //TODO pass in contact position in frame of object for efficiency?
+
+        contactPositionsToDraw.push(contactPositionInWorldFrame);
+
         //mostly copy/paste from elsewhere
         var cor = effectiveCor(object1, object2);
 
