@@ -110,6 +110,16 @@ addPhysicsObject({
     invDensity: 0,
     fillStyle: "black"
 });
+addPhysicsObject({
+    position: [600,540],
+    velocity: [0,0],
+    rotation: 0.1,
+    radius:160,
+    objType: "circle",
+    cor: standardCor,
+    invDensity: 0,
+    fillStyle: "black"
+});
 
 for (var ii=0;ii<10;ii++){
     addPhysicsObject({
@@ -396,7 +406,6 @@ function processPossibleCollisionCircleChull(circle, chull){
     function doCollision(penetrationVectorInRotatedFrame, contactPointInRotatedFrame){
         
         //TODO take contact point into account to apply torque, friction etc
-        //TODO draw contact point.
 
         var contactPositionInWorldFrame = [
             chull.position[0] + contactPointInRotatedFrame[0]*cxsx[0] - contactPointInRotatedFrame[1]*cxsx[1],
@@ -431,6 +440,7 @@ function processPossibleCollisionCircleChull(circle, chull){
 
         updateSpeedForObject(object1);
         updateSpeedForObject(object2);
+            //TODO do above correctly using impulse (off centre impulse won't cause as much velocity change of shape centres)
 
 
         //friction
@@ -449,12 +459,31 @@ function processPossibleCollisionCircleChull(circle, chull){
 
         var velocityToRemoveInTangentDirection = velocityInTangentDirection.map(x=>x*fractionToRemove);
 
+        //TODO add component of invmass due off-centre force causing rotation
         object1.velocity[0]-=velocityToRemoveInTangentDirection[0]*object1.invMass/totalInvMass;
         object1.velocity[1]-=velocityToRemoveInTangentDirection[1]*object1.invMass/totalInvMass;
         object2.velocity[0]+=velocityToRemoveInTangentDirection[0]*object2.invMass/totalInvMass;
         object2.velocity[1]+=velocityToRemoveInTangentDirection[1]*object2.invMass/totalInvMass;
 
 
+
+        //apply torque to shape due to reaction impulse (not friction). this shoudn't affect circle since contact to circle centre
+        //is parallel to impulse direction
+        var tangentVectorInRotatedFrame = [contactNormal[1],-contactNormal[0]];
+        var leverDistance = dotProd(tangentVectorInRotatedFrame, contactPointInRotatedFrame);
+        
+        var invMomentOfInertia = 0.0005*chull.invMass   //TODO correct value
+        var rotationalInvMass = invMomentOfInertia*(leverDistance*leverDistance);
+        var effectiveInvMass = totalInvMass + rotationalInvMass;
+        var speedChangeToApply = (1+chull.cor)*speedDifferenceAlongNormal;
+
+        var normalImpulse = speedChangeToApply/effectiveInvMass;
+
+        chull.angVel+= leverDistance*normalImpulse*invMomentOfInertia;
+
+        
+        //TODO apply torque due to friction...
+        //TODO factor in effect of contact point speed due to application of friction.
 
         function updateSpeedForObject(theObject){
             var velInMovingFrame = vectorDifference(theObject.velocity, cOfMVelocity);
