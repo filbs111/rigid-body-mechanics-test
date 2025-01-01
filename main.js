@@ -72,7 +72,7 @@ function addPhysicsObject(theObject){
 
 addPhysicsObject({
     position: [200,100],
-    rotation: -0.2,
+    rotation: -0.2+Math.PI,
     velocity: [0.3,1],
     objType: "rect",
     sideHalfEdges: [20,30],
@@ -121,21 +121,32 @@ addPhysicsObject({
     fillStyle: "black"
 });
 
+addPhysicsObject({
+    position: [600,340],
+    velocity: [0,0],
+    rotation: 0.1,
+    objType: "rect",
+    sideHalfEdges: [50,10],
+    cor: standardCor,
+    invDensity: 1,
+    fillStyle: "olive"
+});
+
+
 for (var ii=0;ii<10;ii++){
     addPhysicsObject({
         position: [50,20+50*ii],
         velocity: [0,0],
-        rotation: 0,
-        //objType: "rect",
-        //sideHalfEdges: [20,20],
-        objType: "circle",
-        radius: 25,
+        rotation: 0,    //Math.random()*60,
+        objType: "rect",
+        sideHalfEdges: [15,15],
+        //objType: "circle",
+        //radius: 25,
         cor: standardCor,
         invDensity: 1,
         fillStyle: `rgba(32, 45, ${ii*25}, 255)`
     });
 }
-
 
 //CIRCLES
 addPhysicsObject({
@@ -430,24 +441,21 @@ function processPossibleCollisionCircleChull(circle, chull){
 
         //impart impulse along this direction
         var separationSq = vectorLengthSq(penetrationVector);
-
-        var cOfMVelocity = [
-            (object1.velocity[0]*object2.invMass + object2.velocity[0]*object1.invMass)/(object1.invMass+ object2.invMass),
-            (object1.velocity[1]*object2.invMass + object2.velocity[1]*object1.invMass)/(object1.invMass+ object2.invMass)
-            ];
             
         //NOTE This is a copy paste from circle-circle collision. positionDifference is swapped out for penetrationVector. TODO dedupe!
 
-        updateSpeedForObject(object1);
-        updateSpeedForObject(object2);
+  //      updateSpeedForObject(object1);
+   //     updateSpeedForObject(object2);
             //TODO do above correctly using impulse (off centre impulse won't cause as much velocity change of shape centres)
 
-
+        
         //friction
         //this is a copy paste of CircleCircle code, but with penetrationVector instead of positionDifference
         var currentSeparation = Math.sqrt(separationSq);
         var contactNormal = penetrationVector.map(x=>x/currentSeparation);
+
         var speedDifferenceAlongNormal = dotProd(contactNormal, velocityDifference);
+
         var velocityInTangentDirection = [
             velocityDifference[0] - speedDifferenceAlongNormal*contactNormal[0],
             velocityDifference[1] - speedDifferenceAlongNormal*contactNormal[1]
@@ -469,39 +477,33 @@ function processPossibleCollisionCircleChull(circle, chull){
 
         //apply torque to shape due to reaction impulse (not friction). this shoudn't affect circle since contact to circle centre
         //is parallel to impulse direction
-        var tangentVectorInRotatedFrame = [contactNormal[1],-contactNormal[0]];
+        var tangentVectorInRotatedFrame = [penetrationVectorInRotatedFrame[1],-penetrationVectorInRotatedFrame[0]];
         var leverDistance = dotProd(tangentVectorInRotatedFrame, contactPointInRotatedFrame);
-        
-        var invMomentOfInertia = 0.0005*chull.invMass   //TODO correct value
+
+        //var invMomentOfInertia = 0.0005*chull.invMass   //TODO correct value
+        var invMomentOfInertia = chull.objType == "chull" ? 0.0005*chull.invMass   //TODO correct value
+                : chull.invMass*3/(chull.sideHalfEdges[0]*chull.sideHalfEdges[0] + chull.sideHalfEdges[1]*chull.sideHalfEdges[1]); 
+
+                //nvMomentOfInertia/=3;    //hack
+
         var rotationalInvMass = invMomentOfInertia*(leverDistance*leverDistance);
         var effectiveInvMass = totalInvMass + rotationalInvMass;
         var speedChangeToApply = (1+chull.cor)*speedDifferenceAlongNormal;
 
         var normalImpulse = speedChangeToApply/effectiveInvMass;
 
+
+        circle.velocity[0]-= circle.invMass * normalImpulse * contactNormal[0];
+        circle.velocity[1]-= circle.invMass * normalImpulse * contactNormal[1];
+
+        chull.velocity[0]+= chull.invMass * normalImpulse * contactNormal[0];
+        chull.velocity[1]+= chull.invMass * normalImpulse * contactNormal[1];
+
         chull.angVel+= leverDistance*normalImpulse*invMomentOfInertia;
 
         
         //TODO apply torque due to friction...
         //TODO factor in effect of contact point speed due to application of friction.
-
-        function updateSpeedForObject(theObject){
-            var velInMovingFrame = vectorDifference(theObject.velocity, cOfMVelocity);
-            
-            var mulltiplier1 = dotProd(velInMovingFrame, penetrationVector)/separationSq;
-
-            var velInMovingFrameComponentAlongReactionNormal = 
-                [penetrationVector[0]*mulltiplier1, penetrationVector[1]*mulltiplier1];
-
-            var perpendicularPart = vectorDifference(velInMovingFrame, velInMovingFrameComponentAlongReactionNormal);
-
-            //TODO formulate using impulses instead?
-            theObject.velocity = [
-                cOfMVelocity[0] + perpendicularPart[0] - cor * velInMovingFrameComponentAlongReactionNormal[0],
-                cOfMVelocity[1] + perpendicularPart[1] - cor * velInMovingFrameComponentAlongReactionNormal[1],
-            ];
-        }
-
     }
 }
 
@@ -520,7 +522,9 @@ function processPossibleCollisionChullChull(chull1, chull2){
     processPointsForEdges(chull2, chull1);
 
     if (leastPenetration>0 && leastPenetration != Number.MAX_VALUE){
-        doCollision(penNormal.map(x=>x*leastPenetration), contactPoint);
+        if (contactPoint){  //TODO does this happen and why
+            doCollision(penNormal.map(x=>x*leastPenetration), contactPoint);
+        }
     }
 
     function processPointsForEdges(chullForPoints, chullForEdges){
@@ -565,10 +569,12 @@ function processPossibleCollisionChullChull(chull1, chull2){
                     cxsxEdges[0]*edgedir[0] - cxsxEdges[1]*edgedir[1],
                     cxsxEdges[0]*edgedir[1] + cxsxEdges[1]*edgedir[0]
                 ]
-                contactPoint = [
-                    chullForEdges.position[0] + cxsxEdges[0]*pickedPoint[0] - cxsxEdges[1]*pickedPoint[1],
-                    chullForEdges.position[1] + cxsxEdges[0]*pickedPoint[1] + cxsxEdges[1]*pickedPoint[0]
-                ];
+                if (pickedPoint){   //does this ever happen? why?
+                    contactPoint = [
+                        chullForEdges.position[0] + cxsxEdges[0]*pickedPoint[0] - cxsxEdges[1]*pickedPoint[1],
+                        chullForEdges.position[1] + cxsxEdges[0]*pickedPoint[1] + cxsxEdges[1]*pickedPoint[0]
+                    ];
+                }
             }
         }
     }
@@ -594,21 +600,15 @@ function processPossibleCollisionChullChull(chull1, chull2){
         //impart impulse along this direction
         var separationSq = vectorLengthSq(penetrationVector);
 
-        var cOfMVelocity = [
-            (object1.velocity[0]*object2.invMass + object2.velocity[0]*object1.invMass)/totalInvMass,
-            (object1.velocity[1]*object2.invMass + object2.velocity[1]*object1.invMass)/totalInvMass
-            ];
-            
+        
         //NOTE This is a copy paste from circle-circle collision. positionDifference is swapped out for penetrationVector. TODO dedupe!
-
-        updateSpeedForObject(object1);
-        updateSpeedForObject(object2);
 
         //friction
         //this is a copy paste of CircleCircle code, but with penetrationVector instead of positionDifference
         var currentSeparation = Math.sqrt(separationSq);
         var contactNormal = penetrationVector.map(x=>x/currentSeparation);
         var speedDifferenceAlongNormal = dotProd(contactNormal, velocityDifference);
+
         var velocityInTangentDirection = [
             velocityDifference[0] - speedDifferenceAlongNormal*contactNormal[0],
             velocityDifference[1] - speedDifferenceAlongNormal*contactNormal[1]
@@ -627,22 +627,40 @@ function processPossibleCollisionChullChull(chull1, chull2){
 
 
 
-        function updateSpeedForObject(theObject){
-            var velInMovingFrame = vectorDifference(theObject.velocity, cOfMVelocity);
-            var mulltiplier1 = dotProd(velInMovingFrame, penetrationVector)/separationSq;
+        //apply torque to shape due to reaction impulse (not friction).
+        var tangentVector = [contactNormal[1],-contactNormal[0]];
 
-            var velInMovingFrameComponentAlongReactionNormal = 
-                [penetrationVector[0]*mulltiplier1, penetrationVector[1]*mulltiplier1];
+        var toContactFromShape1 = vectorDifference(contactPositionInWorldFrame, object1.position);
+        var toContactFromShape2 = vectorDifference(contactPositionInWorldFrame, object2.position);
 
-            var perpendicularPart = vectorDifference(velInMovingFrame, velInMovingFrameComponentAlongReactionNormal);
+        var leverDistance1 = dotProd(tangentVector, toContactFromShape1);
+        var leverDistance2 = dotProd(tangentVector, toContactFromShape2);
 
-            //TODO formulate using impulses instead?
-            theObject.velocity = [
-                cOfMVelocity[0] + perpendicularPart[0] - cor * velInMovingFrameComponentAlongReactionNormal[0],
-                cOfMVelocity[1] + perpendicularPart[1] - cor * velInMovingFrameComponentAlongReactionNormal[1],
-            ];
-        }
+        var invMomentOfInertia1 = object1.objType == "chull" ? 0.0005*object1.invMass   //TODO correct value
+                : object1.invMass*3/(object1.sideHalfEdges[0]*object1.sideHalfEdges[0] + object1.sideHalfEdges[1]*object1.sideHalfEdges[1]); 
+        var invMomentOfInertia2 = object2.objType == "chull" ? 0.0005*object2.invMass   //TODO correct value
+                : object2.invMass*3/(object2.sideHalfEdges[0]*object2.sideHalfEdges[0] + object2.sideHalfEdges[1]*object2.sideHalfEdges[1]); 
+        
+        var rotationalInvMass = invMomentOfInertia1*leverDistance1*leverDistance1 
+                                + invMomentOfInertia2*leverDistance2*leverDistance2;
+        var effectiveInvMass = totalInvMass + rotationalInvMass;
+        var speedChangeToApply = (1+cor)*speedDifferenceAlongNormal;
 
+        var normalImpulse = speedChangeToApply/effectiveInvMass;    //TODO actually use this here for change to centre of mass velocities
+
+
+        object1.velocity[0]-= object1.invMass * normalImpulse * contactNormal[0];
+        object1.velocity[1]-= object1.invMass * normalImpulse * contactNormal[1];
+
+        object2.velocity[0]+= object2.invMass * normalImpulse * contactNormal[0];
+        object2.velocity[1]+= object2.invMass * normalImpulse * contactNormal[1];
+
+
+        object1.angVel-= leverDistance1*normalImpulse*invMomentOfInertia1;
+        object2.angVel+= leverDistance2*normalImpulse*invMomentOfInertia2;
+
+        //TODO apply torque due to friction...
+        //TODO factor in effect of contact point speed due to application of friction.
     }
 }
 
@@ -730,7 +748,7 @@ function updateAndRender(timestamp){
 
     while (iterationsToCatchUp > 0){
         iterationsToCatchUp-=1;
-
+        
         //move objects
         physicsObjects.forEach((x) => {
             x.position[0] += x.velocity[0];
@@ -881,11 +899,12 @@ function updateAndRender(timestamp){
 
         //apply gravity.
         //var gravDirection = (0.0005*timestamp) % (2*Math.PI);
-        var gravDirection=0;    //Math.PI/2;
+        var gravDirection=Math.PI/2;
+        var gravStrength = 0.005;
         physicsObjects.forEach((x) => {
             if (x.invDensity!=0){
-                x.velocity[0]+=0.01*Math.cos(gravDirection);
-                x.velocity[1]+=0.01*Math.sin(gravDirection);
+                x.velocity[0]+=gravStrength*Math.cos(gravDirection);
+                x.velocity[1]+=gravStrength*Math.sin(gravDirection);
             }
         });
     }
