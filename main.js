@@ -156,7 +156,7 @@ for (var ii=0;ii<10;ii++){
         //radius: 25,
         cor: standardCor,
         invDensity: 1,
-        fillStyle: `rgba(32, 45, ${ii*25}, 255)`
+        fillStyle: `rgba(60, 90, ${50+ii*20}, 255)`
     });
 }
 
@@ -968,7 +968,7 @@ function updateAndRender(timestamp){
     ctx.fillStyle = "#aaa";
     ctx.fillRect(0, 0, canvas_width, canvas_height);
 
-    physicsObjects.forEach((x) => {
+    physicsObjects.forEach((x, idx) => {
         ctx.fillStyle = x.fillStyle;
 
         //TODO render method per object.
@@ -984,7 +984,6 @@ function updateAndRender(timestamp){
             ctx.lineTo(x.position[0]+x.radius*Math.sin(x.rotation),x.position[1]-x.radius*Math.cos(x.rotation));
             ctx.closePath();
             ctx.stroke();
-
         }else if (x.objType == "chull" || x.objType == "rect"){
             var cxsx = [Math.cos(x.rotation), Math.sin(x.rotation)];
             var transformedPoints = x.points.map(p =>
@@ -1005,6 +1004,8 @@ function updateAndRender(timestamp){
             ctx.fill();
             ctx.stroke();
         }
+
+        ctx.strokeText(idx, x.position[0], x.position[1]);
     });
 
     ctx.strokeStyle = "black";
