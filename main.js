@@ -472,7 +472,11 @@ function processPossibleCollisionCircleChull(circle, chull){
         var speedDifferenceInTangentDirection = vectorLength(velocityInTangentDirection);
 
         var fractionToRemove = Math.min(1, Math.abs(speedDifferenceAlongNormal)*friction_mu/speedDifferenceInTangentDirection);
-            //is abs required? TODO handle speed=zero
+            //is abs required?
+        if (isNaN(fractionToRemove)){
+            console.log("fractionToRemove is NaN!");
+            fractionToRemove=0; //TODO how to avoid this check? - just add some small amount to speedDifferenceInTangentDirection?
+        }
 
         var velocityToRemoveInTangentDirection = velocityInTangentDirection.map(x=>x*fractionToRemove);
 
@@ -602,7 +606,6 @@ function processPossibleCollisionChullChull(chull1, chull2){
 
         //impart impulse along this direction
         var separationSq = vectorLengthSq(penetrationVector);
-
         
         //NOTE This is a copy paste from circle-circle collision. positionDifference is swapped out for penetrationVector. TODO dedupe!
 
@@ -619,7 +622,11 @@ function processPossibleCollisionChullChull(chull1, chull2){
         var speedDifferenceInTangentDirection = vectorLength(velocityInTangentDirection);
 
         var fractionToRemove = Math.min(1, Math.abs(speedDifferenceAlongNormal)*friction_mu/speedDifferenceInTangentDirection);
-            //is abs required? TODO handle speed=zero
+            //is abs required?
+        if (isNaN(fractionToRemove)){
+            console.log("fractionToRemove is NaN!");
+            fractionToRemove=0; //TODO how to avoid this check? - just add some small amount to speedDifferenceInTangentDirection?
+        }
 
         var velocityToRemoveInTangentDirection = velocityInTangentDirection.map(x=>x*fractionToRemove);
 
