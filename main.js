@@ -65,6 +65,18 @@ function addPhysicsObject(theObject){
         theObject.radsq = theObject.radius*theObject.radius;
     }
 
+    switch(theObject.objType) {
+        case "chull":
+            theObject.invMomentOfInertia = 0.0005*theObject.invMass;    //TODO calculate properly
+            break;
+        case "circle":
+            theObject.invMomentOfInertia = 1/(theObject.radsq);   //TODO choose something sensible for this (disc? ball? suspect want 1/r^3, or 1/r^4...)
+            break;
+        default:
+            theObject.invMomentOfInertia = theObject.invMass*3/(theObject.sideHalfEdges[0]*theObject.sideHalfEdges[0] + theObject.sideHalfEdges[1]*theObject.sideHalfEdges[1]);
+                //TODO check / use correct multiplier for rectanglar plate
+        }
+
     theObject.angVel = 0;
 
     physicsObjects.push(theObject);
@@ -118,7 +130,7 @@ addPhysicsObject({
     objType: "circle",
     cor: standardCor,
     invDensity: 0,
-    fillStyle: "black"
+    fillStyle: "#444"
 });
 
 addPhysicsObject({
@@ -282,10 +294,7 @@ function processPossibleCollisionCircleCircle(object1, object2){
 
             var normalImpulse = speedDifferenceAlongNormal*(1+cor)/totalInvMass;
 
-            var invMomentOfInertia1 = 1/(object1.radsq);    //TODO calculate this properly
-            var invMomentOfInertia2 = 1/(object2.radsq);    //""
-
-            var effectiveInvMassForTangentDirection = totalInvMass + invMomentOfInertia1*object1.radsq + invMomentOfInertia2*object2.radsq;
+            var effectiveInvMassForTangentDirection = totalInvMass + object1.invMomentOfInertia*object1.radsq + object2.invMomentOfInertia*object2.radsq;
             var impulseRequiredToStop = speedDifferenceInTangentDirection/effectiveInvMassForTangentDirection;
 
             var frictionImpulse = impulseRequiredToStop*Math.min(1, friction_mu* Math.abs(normalImpulse/impulseRequiredToStop));
@@ -296,8 +305,8 @@ function processPossibleCollisionCircleCircle(object1, object2){
             object2.velocity[1]+=contactNormal[0]*frictionImpulse*object2.invMass;
 
             //impact of torque. TODO check signs?
-            object1.angVel-= frictionImpulse*invMomentOfInertia1*object1.radius;
-            object2.angVel-= frictionImpulse*invMomentOfInertia2*object2.radius;
+            object1.angVel-= frictionImpulse*object1.invMomentOfInertia*object1.radius;
+            object2.angVel-= frictionImpulse*object2.invMomentOfInertia*object2.radius;
 
             function updateSpeedForObject(theObject){
                 var velInMovingFrame = vectorDifference(theObject.velocity, cOfMVelocity);
@@ -480,13 +489,7 @@ function processPossibleCollisionCircleChull(circle, chull){
         var tangentVectorInRotatedFrame = [penetrationVectorInRotatedFrame[1],-penetrationVectorInRotatedFrame[0]].map(x=>x/currentSeparation);
         var leverDistance = dotProd(tangentVectorInRotatedFrame, contactPointInRotatedFrame);
 
-        //var invMomentOfInertia = 0.0005*chull.invMass   //TODO correct value
-        var invMomentOfInertia = chull.objType == "chull" ? 0.0005*chull.invMass   //TODO correct value
-                : chull.invMass*3/(chull.sideHalfEdges[0]*chull.sideHalfEdges[0] + chull.sideHalfEdges[1]*chull.sideHalfEdges[1]); 
-
-                //nvMomentOfInertia/=3;    //hack
-
-        var rotationalInvMass = invMomentOfInertia*(leverDistance*leverDistance);
+        var rotationalInvMass = chull.invMomentOfInertia*(leverDistance*leverDistance);
         var effectiveInvMass = totalInvMass + rotationalInvMass;
         var speedChangeToApply = (1+chull.cor)*speedDifferenceAlongNormal;
 
@@ -499,7 +502,7 @@ function processPossibleCollisionCircleChull(circle, chull){
         chull.velocity[0]+= chull.invMass * normalImpulse * contactNormal[0];
         chull.velocity[1]+= chull.invMass * normalImpulse * contactNormal[1];
 
-        chull.angVel+= leverDistance*normalImpulse*invMomentOfInertia;
+        chull.angVel+= leverDistance*normalImpulse*chull.invMomentOfInertia;
 
         
         //TODO apply torque due to friction...
@@ -636,13 +639,8 @@ function processPossibleCollisionChullChull(chull1, chull2){
         var leverDistance1 = dotProd(tangentVector, toContactFromShape1);
         var leverDistance2 = dotProd(tangentVector, toContactFromShape2);
 
-        var invMomentOfInertia1 = object1.objType == "chull" ? 0.0005*object1.invMass   //TODO correct value
-                : object1.invMass*3/(object1.sideHalfEdges[0]*object1.sideHalfEdges[0] + object1.sideHalfEdges[1]*object1.sideHalfEdges[1]); 
-        var invMomentOfInertia2 = object2.objType == "chull" ? 0.0005*object2.invMass   //TODO correct value
-                : object2.invMass*3/(object2.sideHalfEdges[0]*object2.sideHalfEdges[0] + object2.sideHalfEdges[1]*object2.sideHalfEdges[1]); 
-        
-        var rotationalInvMass = invMomentOfInertia1*leverDistance1*leverDistance1 
-                                + invMomentOfInertia2*leverDistance2*leverDistance2;
+        var rotationalInvMass = object1.invMomentOfInertia*leverDistance1*leverDistance1 
+                                + object2.invMomentOfInertia*leverDistance2*leverDistance2;
         var effectiveInvMass = totalInvMass + rotationalInvMass;
         var speedChangeToApply = (1+cor)*speedDifferenceAlongNormal;
 
@@ -656,8 +654,8 @@ function processPossibleCollisionChullChull(chull1, chull2){
         object2.velocity[1]+= object2.invMass * normalImpulse * contactNormal[1];
 
 
-        object1.angVel-= leverDistance1*normalImpulse*invMomentOfInertia1;
-        object2.angVel+= leverDistance2*normalImpulse*invMomentOfInertia2;
+        object1.angVel-= leverDistance1*normalImpulse*object1.invMomentOfInertia;
+        object2.angVel+= leverDistance2*normalImpulse*object2.invMomentOfInertia;
 
         //TODO apply torque due to friction...
         //TODO factor in effect of contact point speed due to application of friction.
@@ -828,8 +826,8 @@ function updateAndRender(timestamp){
 
                     var surfaceVelocity = x.velocity[frictionDimensionIndex] + sign*x.radius*x.angVel;
                     //apply implulse up to limit determined by coefficient of friction, that will change surface veclocity to zero.
-                    var invMomentOfInertia = 1/x.radsq;    //TODO choose something sensible for this (disc? ball? suspect want 1/r^3, or 1/r^4...)
-                    var effectiveInvMass = x.invMass + invMomentOfInertia*x.radsq;  //AFAIK this part is good.
+                    
+                    var effectiveInvMass = x.invMass + x.invMomentOfInertia*x.radsq;  //AFAIK this part is good.
                     var impulseRequiredToStop = surfaceVelocity/effectiveInvMass;
 
                     if (impulseRequiredToStop!=0){
@@ -839,7 +837,7 @@ function updateAndRender(timestamp){
                         //var frictionImpulse = impulseRequiredToStop;    //sticky (infinite mu)
 
                         x.velocity[frictionDimensionIndex]-= frictionImpulse*x.invMass;
-                        x.angVel -= sign*frictionImpulse*invMomentOfInertia*x.radius;
+                        x.angVel -= sign*frictionImpulse*x.invMomentOfInertia*x.radius;
                     }
                 }
 
@@ -856,11 +854,6 @@ function updateAndRender(timestamp){
                 var miny=transformedPoints.map(x=>x[1]).reduce((a,b) => Math.min(a,b), Number.MAX_VALUE);
                 var maxx=transformedPoints.map(x=>x[0]).reduce((a,b) => Math.max(a,b), Number.MIN_VALUE);
                 var maxy=transformedPoints.map(x=>x[1]).reduce((a,b) => Math.max(a,b), Number.MIN_VALUE);
-
-                //TODO precalc and store on object.
-                var invMomentOfInertia = x.objType == "chull" ? 0.0000005   //TODO correct value
-                    : x.invMass*3/(x.sideHalfEdges[0]*x.sideHalfEdges[0] + x.sideHalfEdges[1]*x.sideHalfEdges[1]); 
-                    //TODO use correct multiplier for rectanglar plate
 
                 if (minx<0 && x.velocity[0] <0 ){
                     x.position[0]-=minx;
@@ -911,7 +904,7 @@ function updateAndRender(timestamp){
                             //TODO save this result from earlier? 
                         var speedChangeToApply = (1+x.cor)*pointTowardsWallSpeed;
 
-                        var rotationalInvMass = invMomentOfInertia*(leverDistance*leverDistance);
+                        var rotationalInvMass = x.invMomentOfInertia*(leverDistance*leverDistance);
                         var effectiveInvMass = x.invMass + rotationalInvMass;
                         var normalImpulse = speedChangeToApply/effectiveInvMass;
 
@@ -921,7 +914,7 @@ function updateAndRender(timestamp){
                         x.velocity[1]-= x.invMass * normalImpulse * wallOutwardNormal[1];
 
                         //apply torque
-                        x.angVel-= leverDistance*normalImpulse*invMomentOfInertia;
+                        x.angVel-= leverDistance*normalImpulse*x.invMomentOfInertia;
                     }
 
                 }
