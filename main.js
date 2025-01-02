@@ -477,7 +477,7 @@ function processPossibleCollisionCircleChull(circle, chull){
 
         //apply torque to shape due to reaction impulse (not friction). this shoudn't affect circle since contact to circle centre
         //is parallel to impulse direction
-        var tangentVectorInRotatedFrame = [penetrationVectorInRotatedFrame[1],-penetrationVectorInRotatedFrame[0]];
+        var tangentVectorInRotatedFrame = [penetrationVectorInRotatedFrame[1],-penetrationVectorInRotatedFrame[0]].map(x=>x/currentSeparation);
         var leverDistance = dotProd(tangentVectorInRotatedFrame, contactPointInRotatedFrame);
 
         //var invMomentOfInertia = 0.0005*chull.invMass   //TODO correct value
