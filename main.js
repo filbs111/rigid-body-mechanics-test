@@ -70,7 +70,7 @@ function addPhysicsObject(theObject){
             theObject.invMomentOfInertia = 0.0005*theObject.invMass;    //TODO calculate properly
             break;
         case "circle":
-            theObject.invMomentOfInertia = 1/(theObject.radsq);   //TODO choose something sensible for this (disc? ball? suspect want 1/r^3, or 1/r^4...)
+            theObject.invMomentOfInertia = theObject.invMass/(theObject.radsq);   //TODO choose something sensible for this (disc? ball? suspect want 1/r^3, or 1/r^4...)
             break;
         default:
             theObject.invMomentOfInertia = theObject.invMass*3/(theObject.sideHalfEdges[0]*theObject.sideHalfEdges[0] + theObject.sideHalfEdges[1]*theObject.sideHalfEdges[1]);
