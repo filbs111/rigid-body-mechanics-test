@@ -61,13 +61,13 @@ function addPhysicsObject(theObject){
         theObject.edges=edges;
     }
 
-    if (theObject.objType == "circle"){
+    if (theObject.radius){
         theObject.radsq = theObject.radius*theObject.radius;
     }
 
     switch(theObject.objType) {
         case "chull":
-            theObject.invMomentOfInertia = 0.0005*theObject.invMass;    //TODO calculate properly
+            theObject.invMomentOfInertia = theObject.invMass/(theObject.radsq);   //TODO calculate properly
             break;
         case "circle":
             theObject.invMomentOfInertia = theObject.invMass/(theObject.radsq);   //TODO choose something sensible for this (disc? ball? suspect want 1/r^3, or 1/r^4...)
@@ -86,12 +86,14 @@ addPhysicsObject({
     position: [200,100],
     rotation: -0.2+Math.PI,
     velocity: [0.3,1],
-    objType: "rect",
-    sideHalfEdges: [20,15],
+    radius:20,  //a cheat to get mass calculation (TODO calc mass for general convex shape)
+    objType: "chull",
+    points: [[-20,-20], [-20,20], [25,3], [25,-3]],
     cor: standardCor,
     invDensity: 1,
     fillStyle: "white"
 });
+
 addPhysicsObject({
     position: [210,30],
     velocity: [0.3,1],
@@ -636,7 +638,6 @@ function processPossibleCollisionChullChull(chull1, chull2){
         object2.velocity[1]+=velocityToRemoveInTangentDirection[1]*object2.invMass/totalInvMass;
 
 
-
         //apply torque to shape due to reaction impulse (not friction).
         var tangentVector = [contactNormal[1],-contactNormal[0]];
 
@@ -838,7 +839,6 @@ function updateAndRender(timestamp){
                     var impulseRequiredToStop = surfaceVelocity/effectiveInvMass;
 
                     if (impulseRequiredToStop!=0){
-
                         var normalImpulse = velchange/x.invMass;
                         var frictionImpulse = impulseRequiredToStop * Math.min( 1 , friction_mu*Math.abs(normalImpulse/impulseRequiredToStop));
                         //var frictionImpulse = impulseRequiredToStop;    //sticky (infinite mu)
