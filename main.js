@@ -862,13 +862,13 @@ function updateAndRender(timestamp){
                 var maxx=transformedPoints.map(x=>x[0]).reduce((a,b) => Math.max(a,b), Number.MIN_VALUE);
                 var maxy=transformedPoints.map(x=>x[1]).reduce((a,b) => Math.max(a,b), Number.MIN_VALUE);
 
-                if (minx<0 && x.velocity[0] <0 ){
+                if (minx<0){
                     x.position[0]-=minx;
                     collideWithWall([-1,0],0);
                 }
 
                 //ceiling
-                if (miny<0 && x.velocity[1] <0 ){
+                if (miny<0){
                     x.position[1]-=miny;
                     collideWithWall([0,-1],0);
                 }
