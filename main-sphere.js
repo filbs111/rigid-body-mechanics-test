@@ -30,17 +30,21 @@ function drawGlobe(){
     //for current world orientation,
     //render lat, long points
 
-    for (var ii=0;ii<globePoints3d.length;ii++){
-        var ll = globePointsLL[ii];
-        var globePoint = globePoints3d[ii];
+    var cameraMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), cameraRotation);
 
-        var cameraMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), cameraRotation);
+    var transformedPoints = globePoints3d.map( globePoint=> {
         var globePointVec = glMatrix.vec3.create();
         globePointVec[0] = globePoint[0];
         globePointVec[1] = globePoint[1];
         globePointVec[2] = globePoint[2];
 
-        var transformedPoint = glMatrix.vec3.transformMat3(glMatrix.mat3.create(), globePointVec, cameraMat);
+        return glMatrix.vec3.transformMat3(glMatrix.mat3.create(), globePointVec, cameraMat);
+    });
+
+    for (var ii=0;ii<globePoints3d.length;ii++){
+        var ll = globePointsLL[ii];
+
+        var transformedPoint = transformedPoints[ii];
 
         if (transformedPoint[2]>0){
             var projectedPoint = [
