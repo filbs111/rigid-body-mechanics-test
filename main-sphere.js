@@ -5,6 +5,11 @@ canvas.width = canvas_width;
 canvas.height = canvas_height;
 var ctx = canvas.getContext("2d");
 
+var currentTime = null;
+var physStepTime = 3;   //phys step every 3 ms.
+var physTimeToCatchUp = 0;
+var maxIterationsPerDraw = 10;
+
 
 var globePointsLL = [[-90,0],[90,0]];
 for (var la = -80;la<90;la+=10){
@@ -29,12 +34,18 @@ function drawGlobe(){
         var ll = globePointsLL[ii];
         var globePoint = globePoints3d[ii];
 
-        var transformedPoint = globePoint;  //TODO rotate
+        var cxsxCameraRotation = [Math.cos(cameraRotation), Math.sin(cameraRotation)];
+
+        var transformedPoint = [
+            globePoint[0]*cxsxCameraRotation[0] + globePoint[2]*cxsxCameraRotation[1],
+            globePoint[1],
+            globePoint[2]*cxsxCameraRotation[0] - globePoint[0]*cxsxCameraRotation[1]
+        ];
 
         if (transformedPoint[2]>0){
             var projectedPoint = [
-                canvasHalfsize[0]*(1+ globePoint[0]/(globePoint[2]*canvasHalfFov[0])) ,
-                canvasHalfsize[1]*(1+ globePoint[1]/(globePoint[2]*canvasHalfFov[1]))
+                canvasHalfsize[0]*(1+ transformedPoint[0]/(transformedPoint[2]*canvasHalfFov[0])) ,
+                canvasHalfsize[1]*(1+ transformedPoint[1]/(transformedPoint[2]*canvasHalfFov[1]))
             ];
     
     
@@ -47,10 +58,81 @@ function drawGlobe(){
 }
 
 
+var currentKeyPresses={
+    left:false,
+    right:false,
+    up:false,
+    down:false
+};
+
+document.addEventListener("keydown", e => {
+    switch (e.keyCode) {
+        case 37:
+            currentKeyPresses.left=true;
+            break;
+        case 38:
+            currentKeyPresses.up=true;
+            break;
+        case 39:
+            currentKeyPresses.right=true;
+            break;
+        case 40:
+            currentKeyPresses.down=true;
+            break;
+    }
+});
+document.addEventListener("keyup", e => {
+    switch (e.keyCode) {
+        case 37:
+            currentKeyPresses.left=false;
+            break;
+        case 38:
+            currentKeyPresses.up=false;
+            break;
+        case 39:
+            currentKeyPresses.right=false;
+            break;
+        case 40:
+            currentKeyPresses.down=false;
+            break;
+    }
+});
+
+
+
+var cameraRotation = 0; //TODO store as matrix/quaternion...
+
+//for stepping physics engine.
+currentTime = window.performance.now();
+console.log("initial time = " + currentTime);
 requestAnimationFrame(updateAndRender);
 
 function updateAndRender(timestamp){
     requestAnimationFrame(updateAndRender);
+
+    var timeDifference = timestamp - currentTime;
+    currentTime = timestamp;
+
+    physTimeToCatchUp += timeDifference;
+
+    var iterationsToCatchUp = Math.floor(physTimeToCatchUp/physStepTime);
+
+    physTimeToCatchUp-=iterationsToCatchUp*physStepTime;
+
+    //cap iterations
+    if (iterationsToCatchUp>maxIterationsPerDraw){
+        iterationsToCatchUp=maxIterationsPerDraw;
+        physTimeToCatchUp=0;
+    }
+
+    while (iterationsToCatchUp > 0){
+        iterationsToCatchUp-=1;
+
+        if (currentKeyPresses.up){
+            cameraRotation = (cameraRotation+0.01)%(Math.PI*2);
+        }
+    }
+
 
     ctx.fillStyle = "#aaa";
     ctx.fillRect(0, 0, canvas_width, canvas_height);
