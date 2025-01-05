@@ -34,20 +34,19 @@ function drawGlobe(){
         var ll = globePointsLL[ii];
         var globePoint = globePoints3d[ii];
 
-        var cxsxCameraRotation = [Math.cos(cameraRotation), Math.sin(cameraRotation)];
+        var cameraMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), cameraRotation);
+        var globePointVec = glMatrix.vec3.create();
+        globePointVec[0] = globePoint[0];
+        globePointVec[1] = globePoint[1];
+        globePointVec[2] = globePoint[2];
 
-        var transformedPoint = [
-            globePoint[0]*cxsxCameraRotation[0] + globePoint[2]*cxsxCameraRotation[1],
-            globePoint[1],
-            globePoint[2]*cxsxCameraRotation[0] - globePoint[0]*cxsxCameraRotation[1]
-        ];
+        var transformedPoint = glMatrix.vec3.transformMat3(glMatrix.mat3.create(), globePointVec, cameraMat);
 
         if (transformedPoint[2]>0){
             var projectedPoint = [
                 canvasHalfsize[0]*(1+ transformedPoint[0]/(transformedPoint[2]*canvasHalfFov[0])) ,
                 canvasHalfsize[1]*(1+ transformedPoint[1]/(transformedPoint[2]*canvasHalfFov[1]))
             ];
-    
     
             ctx.fillRect(projectedPoint[0]-5,projectedPoint[1]-5,10,10);
     
@@ -100,7 +99,7 @@ document.addEventListener("keyup", e => {
 
 
 
-var cameraRotation = 0; //TODO store as matrix/quaternion...
+var cameraRotation = glMatrix.quat.create(); 
 
 //for stepping physics engine.
 currentTime = window.performance.now();
@@ -128,9 +127,14 @@ function updateAndRender(timestamp){
     while (iterationsToCatchUp > 0){
         iterationsToCatchUp-=1;
 
-        if (currentKeyPresses.up){
-            cameraRotation = (cameraRotation+0.01)%(Math.PI*2);
-        }
+        var upness = (currentKeyPresses.up ? 1:0) - (currentKeyPresses.down ? 1:0);
+        var leftness = (currentKeyPresses.left ? 1:0) - (currentKeyPresses.right ? 1:0);
+
+        var quatToRotate = glMatrix.quat.fromEuler(glMatrix.quat.create(), -0.1*upness ,0.1*leftness,0);
+
+            //note this version of glmatrix is very strange/verbose/confusing. perhaps for performance reasons. TODO wrap to make more readable? use older? write own?
+        glMatrix.quat.multiply(cameraRotation, quatToRotate, cameraRotation);
+        //cameraRotation.multiply(quatToRotate);  //TODO make into OO style?
     }
 
 
