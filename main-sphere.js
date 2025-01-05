@@ -61,7 +61,9 @@ var currentKeyPresses={
     left:false,
     right:false,
     up:false,
-    down:false
+    down:false,
+    caretleft:false,
+    caretright:false
 };
 
 document.addEventListener("keydown", e => {
@@ -78,6 +80,12 @@ document.addEventListener("keydown", e => {
         case 40:
             currentKeyPresses.down=true;
             break;
+        case 188:
+            currentKeyPresses.caretleft=true;
+            break;
+        case 190:
+            currentKeyPresses.caretright=true;
+            break;
     }
 });
 document.addEventListener("keyup", e => {
@@ -93,6 +101,12 @@ document.addEventListener("keyup", e => {
             break;
         case 40:
             currentKeyPresses.down=false;
+            break;
+        case 188:
+            currentKeyPresses.caretleft=false;
+            break;
+        case 190:
+            currentKeyPresses.caretright=false;
             break;
     }
 });
@@ -129,8 +143,9 @@ function updateAndRender(timestamp){
 
         var upness = (currentKeyPresses.up ? 1:0) - (currentKeyPresses.down ? 1:0);
         var leftness = (currentKeyPresses.left ? 1:0) - (currentKeyPresses.right ? 1:0);
+        var spinness = (currentKeyPresses.caretleft ? 1:0) - (currentKeyPresses.caretright ? 1:0);
 
-        var quatToRotate = glMatrix.quat.fromEuler(glMatrix.quat.create(), -0.1*upness ,0.1*leftness,0);
+        var quatToRotate = glMatrix.quat.fromEuler(glMatrix.quat.create(), -0.1*upness ,0.1*leftness,0.1*spinness);
 
             //note this version of glmatrix is very strange/verbose/confusing. perhaps for performance reasons. TODO wrap to make more readable? use older? write own?
         glMatrix.quat.multiply(cameraRotation, quatToRotate, cameraRotation);
