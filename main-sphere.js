@@ -17,6 +17,24 @@ for (var la = -80;la<90;la+=10){
         globePointsLL.push([la,lo]);
     }
 }
+var globeEdges = [];
+//note lines of latitude project to straight lines so don't have to be in so many bits
+for (var lo = -180, xx=0; lo<180; lo+=10, xx++){
+    globeEdges.push([0,2+xx]);          //lines of latitude touching poles
+    globeEdges.push([1,578+xx]);    //16*36+2
+}
+for (var la = -80, xx=0;la<80;la+=10, xx++){
+    for (var lo = -180, yy=0; lo<180; lo+=10, yy++){
+        globeEdges.push([2+36*xx+yy,2+36*(xx+1)+yy]); //lines of latitude
+    }
+}
+for (var la = -80, xx=0;la<90;la+=10, xx++){
+    for (var lo = -180, yy=0; lo<170; lo+=10, yy++){
+        globeEdges.push([2+36*xx+yy,2+36*xx+yy+1]); //lines of latitude
+    }
+    globeEdges.push([2+36*xx,2+36*xx+35]);
+}
+
 var globePoints3d = globePointsLL.map(ll => {
     var lat = ll[0]*Math.PI/180;
     var lon = ll[1]*Math.PI/180;
@@ -41,6 +59,9 @@ function drawGlobe(){
         return glMatrix.vec3.transformMat3(glMatrix.mat3.create(), globePointVec, cameraMat);
     });
 
+    ctx.fillStyle = "#faa";
+    ctx.strokeStyle = "#000";
+
     for (var ii=0;ii<globePoints3d.length;ii++){
         var ll = globePointsLL[ii];
 
@@ -57,8 +78,31 @@ function drawGlobe(){
             ctx.strokeText(`(${ll[0]},${ll[1]})`, projectedPoint[0], projectedPoint[1]);
         }
     }
-    //TODO render lines between points.
-}
+
+    ctx.strokeStyle = "#fff";
+
+    for (var ii=0;ii<globeEdges.length;ii++){
+
+        var globeEdge = globeEdges[ii];
+        var transformedPointFrom = transformedPoints[globeEdge[0]];
+        var transformedPointTo = transformedPoints[globeEdge[1]];
+
+        if (transformedPointFrom[2]>0 && transformedPointTo[2]>0){
+            var projectedPointFrom = [
+                canvasHalfsize[0]*(1+ transformedPointFrom[0]/(transformedPointFrom[2]*canvasHalfFov[0])) ,
+                canvasHalfsize[1]*(1+ transformedPointFrom[1]/(transformedPointFrom[2]*canvasHalfFov[1]))
+            ];
+            var projectedPointTo = [
+                canvasHalfsize[0]*(1+ transformedPointTo[0]/(transformedPointTo[2]*canvasHalfFov[0])) ,
+                canvasHalfsize[1]*(1+ transformedPointTo[1]/(transformedPointTo[2]*canvasHalfFov[1]))
+            ];
+    
+            ctx.beginPath();
+            ctx.moveTo(projectedPointFrom[0], projectedPointFrom[1]);
+            ctx.lineTo(projectedPointTo[0], projectedPointTo[1]);
+            ctx.stroke();
+        }
+    }}
 
 
 var currentKeyPresses={
@@ -159,9 +203,6 @@ function updateAndRender(timestamp){
 
     ctx.fillStyle = "#aaa";
     ctx.fillRect(0, 0, canvas_width, canvas_height);
-
-    ctx.fillStyle = "#faa";
-    ctx.strokeStyle = "#000";
 
     drawGlobe();
 }
