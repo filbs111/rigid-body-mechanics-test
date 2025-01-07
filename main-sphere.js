@@ -60,7 +60,7 @@ function drawGlobe(){
         globePointVec[1] = globePoint[1];
         globePointVec[2] = globePoint[2];
 
-        return glMatrix.vec3.transformMat3(glMatrix.mat3.create(), globePointVec, cameraMat);
+        return glMatrix.vec3.transformMat3(glMatrix.vec3.create(), globePointVec, cameraMat);
     });
 
     ctx.fillStyle = "#faa";
@@ -109,17 +109,33 @@ function drawGlobe(){
     }
 }
 
-function drawSpaceship(){
+function drawSpaceship(cameraQuat, objectQuat, objectColor){
     //TODO take orientation as input.
-    ctx.strokeStyle = "#0fa";
+    ctx.strokeStyle = objectColor;
+
+    
+    var conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(), objectQuat);
+    var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), conjugated, cameraQuat);
+    //var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), cameraQuat, conjugated);    //this works fine too!
+
+    var viewMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), relativeQuat);
 
     //take 2d points to be shape projected onto plane (so looks just the same on screen)
     //TODO? store 3d points so can simply rotate.
     //more efficient solution might be to generate some special rotation/projection matrix, but unnecessary.
+    var projected3dpoints = spaceshipPoints.map(pp => {
+        var pp3 = [pp[0],pp[1],100];
+        var length = Math.sqrt(pp3[0]*pp3[0] + pp3[1]*pp3[1] + pp3[2]*pp3[2]);
+        return pp3.map(cc => cc/length);
+    });
 
-    var pointsOnScreen = spaceshipPoints.map(pp => [
-            canvasHalfsize[0]+ pp[0],
-            canvasHalfsize[1]+ pp[1]
+    var rotatedPoints = projected3dpoints.map(pp => 
+        glMatrix.vec3.transformMat3(glMatrix.vec3.create(), pp, viewMat)
+    );
+
+    var pointsOnScreen = rotatedPoints.map(pp => [
+            canvasHalfsize[0]* (1+ pp[0]/(pp[2]*canvasHalfFov[0])),
+            canvasHalfsize[1]* (1+ pp[1]/(pp[2]*canvasHalfFov[1]))
         ]
     );
 
@@ -131,6 +147,8 @@ function drawSpaceship(){
         ctx.lineTo(point[0], point[1]);
     }
     ctx.stroke();
+    //TODO don't draw when pp[2] is -ve (maybe should create edge list and check start, end points, draw
+    //only if poth +ve pp[2]
 }
 
 
@@ -191,6 +209,7 @@ document.addEventListener("keyup", e => {
 
 
 var cameraRotation = glMatrix.quat.create(); 
+var otherObjectRotation = glMatrix.quat.create();
 
 //for stepping physics engine.
 currentTime = window.performance.now();
@@ -235,5 +254,6 @@ function updateAndRender(timestamp){
 
     drawGlobe();
 
-    drawSpaceship();
+    drawSpaceship(cameraRotation,cameraRotation,"#0fa");    //player spaceship
+    drawSpaceship(cameraRotation,otherObjectRotation,"#fa0");
 }
