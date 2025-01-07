@@ -11,6 +11,10 @@ var physTimeToCatchUp = 0;
 var maxIterationsPerDraw = 10;
 
 
+var spaceshipPoints = [[-20,-20], [-20,20], [25,3], [25,-3]];   //triangular spaceship copied from 2d version
+//rotate x,y
+spaceshipPoints = spaceshipPoints.map( pp => [pp[1],-pp[0]]);
+
 var globePointsLL = [[-90,0],[90,0]];
 for (var la = -80;la<90;la+=10){
     for (var lo = -180; lo<180; lo+=10){
@@ -102,7 +106,32 @@ function drawGlobe(){
             ctx.lineTo(projectedPointTo[0], projectedPointTo[1]);
             ctx.stroke();
         }
-    }}
+    }
+}
+
+function drawSpaceship(){
+    //TODO take orientation as input.
+    ctx.strokeStyle = "#0fa";
+
+    //take 2d points to be shape projected onto plane (so looks just the same on screen)
+    //TODO? store 3d points so can simply rotate.
+    //more efficient solution might be to generate some special rotation/projection matrix, but unnecessary.
+
+    var pointsOnScreen = spaceshipPoints.map(pp => [
+            canvasHalfsize[0]+ pp[0],
+            canvasHalfsize[1]+ pp[1]
+        ]
+    );
+
+    ctx.beginPath();
+    var point = pointsOnScreen[pointsOnScreen.length-1];
+    ctx.moveTo(point[0], point[1]);
+    for (var ii=0;ii<pointsOnScreen.length;ii++){
+        point = pointsOnScreen[ii];
+        ctx.lineTo(point[0], point[1]);
+    }
+    ctx.stroke();
+}
 
 
 var currentKeyPresses={
@@ -205,4 +234,6 @@ function updateAndRender(timestamp){
     ctx.fillRect(0, 0, canvas_width, canvas_height);
 
     drawGlobe();
+
+    drawSpaceship();
 }
