@@ -135,16 +135,24 @@ function drawSpaceship(cameraQuat, objectQuat, objectColor){
 
     var pointsOnScreen = rotatedPoints.map(pp => [
             canvasHalfsize[0]* (1+ pp[0]/(pp[2]*canvasHalfFov[0])),
-            canvasHalfsize[1]* (1+ pp[1]/(pp[2]*canvasHalfFov[1]))
+            canvasHalfsize[1]* (1+ pp[1]/(pp[2]*canvasHalfFov[1])),
+            pp[2]>0
         ]
     );
 
     ctx.beginPath();
     var point = pointsOnScreen[pointsOnScreen.length-1];
+    var lastPointPositive = point[2];
+
     ctx.moveTo(point[0], point[1]);
     for (var ii=0;ii<pointsOnScreen.length;ii++){
         point = pointsOnScreen[ii];
-        ctx.lineTo(point[0], point[1]);
+        if (lastPointPositive && point[2]){
+            ctx.lineTo(point[0], point[1]);
+        }else{
+            ctx.moveTo(point[0], point[1]); //assume that lines positive and negative points are outside view
+        }
+        lastPointPositive=point[2];
     }
     ctx.stroke();
     //TODO don't draw when pp[2] is -ve (maybe should create edge list and check start, end points, draw
