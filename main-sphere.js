@@ -115,9 +115,7 @@ function drawSpaceship(cameraQuat, objectQuat, objectColor){
     ctx.fillStyle = "rgba(0,0,0,0.2)";
     
     var conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(), objectQuat);
-    var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), conjugated, cameraQuat);
-    //var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), cameraQuat, conjugated);    //this works fine too!
-
+    var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), cameraQuat, conjugated);
     var viewMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), relativeQuat);
 
     //take 2d points to be shape projected onto plane (so looks just the same on screen)
@@ -266,3 +264,8 @@ function updateAndRender(timestamp){
     drawSpaceship(cameraRotation,cameraRotation,"#0fa");    //player spaceship
     drawSpaceship(cameraRotation,otherObjectRotation,"#fa0");
 }
+
+
+document.getElementById("dropSpaceshipButton").addEventListener("click", evt => {
+    glMatrix.quat.copy(otherObjectRotation, cameraRotation);
+});
