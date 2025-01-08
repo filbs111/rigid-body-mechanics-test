@@ -112,7 +112,7 @@ function drawGlobe(){
 function drawSpaceship(cameraQuat, objectQuat, objectColor){
     //TODO take orientation as input.
     ctx.strokeStyle = objectColor;
-
+    ctx.fillStyle = "rgba(0,0,0,0.2)";
     
     var conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(), objectQuat);
     var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), conjugated, cameraQuat);
@@ -124,7 +124,7 @@ function drawSpaceship(cameraQuat, objectQuat, objectColor){
     //TODO? store 3d points so can simply rotate.
     //more efficient solution might be to generate some special rotation/projection matrix, but unnecessary.
     var projected3dpoints = spaceshipPoints.map(pp => {
-        var pp3 = [pp[0],pp[1],100];
+        var pp3 = [pp[0],pp[1],200];
         var length = Math.sqrt(pp3[0]*pp3[0] + pp3[1]*pp3[1] + pp3[2]*pp3[2]);
         return pp3.map(cc => cc/length);
     });
@@ -155,6 +155,7 @@ function drawSpaceship(cameraQuat, objectQuat, objectColor){
         lastPointPositive=point[2];
     }
     ctx.stroke();
+    ctx.fill();
     //TODO don't draw when pp[2] is -ve (maybe should create edge list and check start, end points, draw
     //only if poth +ve pp[2]
 }
