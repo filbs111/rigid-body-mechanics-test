@@ -14,6 +14,8 @@ var maxIterationsPerDraw = 10;
 var spaceshipPoints = [[-20,-20], [-20,20], [25,3], [25,-3]];   //triangular spaceship copied from 2d version
 //rotate x,y
 spaceshipPoints = spaceshipPoints.map( pp => [pp[1],-pp[0]]);
+//find point furthest from 0,0 to determine bounding circle size
+var boundingCircleRad = Math.sqrt(Math.max.apply(null,spaceshipPoints.map(x=>x[0]*x[0]+x[1]*x[1])));
 
 var globePointsLL = [[-90,0],[90,0]];
 for (var la = -80;la<90;la+=10){
@@ -110,7 +112,6 @@ function drawGlobe(){
 }
 
 function drawSpaceship(cameraQuat, objectQuat, objectColor){
-    //TODO take orientation as input.
     ctx.strokeStyle = objectColor;
     ctx.fillStyle = "rgba(0,0,0,0.2)";
     
@@ -156,6 +157,54 @@ function drawSpaceship(cameraQuat, objectQuat, objectColor){
     ctx.fill();
     //TODO don't draw when pp[2] is -ve (maybe should create edge list and check start, end points, draw
     //only if poth +ve pp[2]
+}
+
+function drawCircle(cameraQuat, objectQuat, circleRadius, sphereColor){
+    //note sphereRadius is circle radius before projection onto sphere towards sphere centre.
+    //TODO dedupe code with object drawing
+
+    ctx.strokeStyle = sphereColor;
+    ctx.fillStyle = "rgba(0,0,0,0.2)";
+    
+    var conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(), objectQuat);
+    var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), cameraQuat, conjugated);
+    var viewMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), relativeQuat);
+
+    var projected3dpoints=[];
+    for (var ii=0;ii<32;ii++){
+        var ang = Math.PI*ii/16;
+        var pp3 = [Math.cos(ang),Math.sin(ang),1/circleRadius];
+        var length = Math.sqrt(pp3[0]*pp3[0] + pp3[1]*pp3[1] + pp3[2]*pp3[2]);
+        projected3dpoints.push(pp3.map(cc => cc/length));
+    }
+
+    var rotatedPoints = projected3dpoints.map(pp => 
+        glMatrix.vec3.transformMat3(glMatrix.vec3.create(), pp, viewMat)
+    );
+
+    var pointsOnScreen = rotatedPoints.map(pp => [
+            canvasHalfsize[0]* (1+ pp[0]/(pp[2]*canvasHalfFov[0])),
+            canvasHalfsize[1]* (1+ pp[1]/(pp[2]*canvasHalfFov[1])),
+            pp[2]>0
+        ]
+    );
+
+    ctx.beginPath();
+    var point = pointsOnScreen[pointsOnScreen.length-1];
+    var lastPointPositive = point[2];
+
+    ctx.moveTo(point[0], point[1]);
+    for (var ii=0;ii<pointsOnScreen.length;ii++){
+        point = pointsOnScreen[ii];
+        if (lastPointPositive && point[2]){
+            ctx.lineTo(point[0], point[1]);
+        }else{
+            ctx.moveTo(point[0], point[1]); //assume that lines positive and negative points are outside view
+        }
+        lastPointPositive=point[2];
+    }
+    ctx.stroke();
+    ctx.fill();
 }
 
 
@@ -260,6 +309,9 @@ function updateAndRender(timestamp){
     ctx.fillRect(0, 0, canvas_width, canvas_height);
 
     drawGlobe();
+
+    drawCircle(cameraRotation,cameraRotation,boundingCircleRad/200,"#0af");
+    drawCircle(cameraRotation,otherObjectRotation,boundingCircleRad/200,"#0af");
 
     drawSpaceship(cameraRotation,cameraRotation,"#0fa");    //player spaceship
     drawSpaceship(cameraRotation,otherObjectRotation,"#fa0");
