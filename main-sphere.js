@@ -330,8 +330,13 @@ document.getElementById("dropSpaceshipButton").addEventListener("click", evt => 
 function angleBetweenPositionsFromQuats(quat_a,quat_b){
     var unrotatedVec = glMatrix.vec3.fromValues(0,0,1);
 
-    var vec_a = glMatrix.vec3.transformQuat(glMatrix.vec3.create(), unrotatedVec, quat_a);
-    var vec_b = glMatrix.vec3.transformQuat(glMatrix.vec3.create(), unrotatedVec, quat_b);
+    var quat_a_conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(), quat_a);
+    var quat_b_conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(), quat_b);
+        //this is ugly! can it be done more nicely within glmatrix? by storing conjugated quat instead, 
+        //perhaps swapping quat multiplications elsewhere?
+
+    var vec_a = glMatrix.vec3.transformQuat(glMatrix.vec3.create(), unrotatedVec, quat_a_conjugated);
+    var vec_b = glMatrix.vec3.transformQuat(glMatrix.vec3.create(), unrotatedVec, quat_b_conjugated);
 
     return glMatrix.vec3.angle(vec_a, vec_b);
 }
