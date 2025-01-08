@@ -13,9 +13,10 @@ var maxIterationsPerDraw = 10;
 
 var spaceshipPoints = [[-20,-20], [-20,20], [25,3], [25,-3]];   //triangular spaceship copied from 2d version
 //rotate x,y
-spaceshipPoints = spaceshipPoints.map( pp => [pp[1]/200,-pp[0]/200]);
+spaceshipPoints = spaceshipPoints.map( pp => [pp[1],-pp[0]].map(xx => xx*0.005));
 //find point furthest from 0,0 to determine bounding circle size
 var boundingCircleRad = Math.sqrt(Math.max.apply(null,spaceshipPoints.map(x=>x[0]*x[0]+x[1]*x[1])));
+var criticalBoundingCircleAngle = 2*Math.atan(boundingCircleRad); 
 
 var globePointsLL = [[-90,0],[90,0]];
 for (var la = -80;la<90;la+=10){
@@ -310,8 +311,12 @@ function updateAndRender(timestamp){
 
     drawGlobe();
 
-    drawCircle(cameraRotation,cameraRotation,boundingCircleRad/200,"#0af");
-    drawCircle(cameraRotation,otherObjectRotation,boundingCircleRad/200,"#0af");
+    var angleBetweenPoints = angleBetweenPositionsFromQuats(cameraRotation,otherObjectRotation);
+    console.log(angleBetweenPoints);
+    var boundingCircleColor = angleBetweenPoints > criticalBoundingCircleAngle ? "#0af" : "#f00";
+
+    drawCircle(cameraRotation,cameraRotation,boundingCircleRad,boundingCircleColor);
+    drawCircle(cameraRotation,otherObjectRotation,boundingCircleRad,boundingCircleColor);
 
     drawSpaceship(cameraRotation,cameraRotation,"#0fa");    //player spaceship
     drawSpaceship(cameraRotation,otherObjectRotation,"#fa0");
@@ -321,3 +326,12 @@ function updateAndRender(timestamp){
 document.getElementById("dropSpaceshipButton").addEventListener("click", evt => {
     glMatrix.quat.copy(otherObjectRotation, cameraRotation);
 });
+
+function angleBetweenPositionsFromQuats(quat_a,quat_b){
+    var unrotatedVec = glMatrix.vec3.fromValues(0,0,1);
+
+    var vec_a = glMatrix.vec3.transformQuat(glMatrix.vec3.create(), unrotatedVec, quat_a);
+    var vec_b = glMatrix.vec3.transformQuat(glMatrix.vec3.create(), unrotatedVec, quat_b);
+
+    return glMatrix.vec3.angle(vec_a, vec_b);
+}
