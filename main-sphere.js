@@ -13,7 +13,7 @@ var maxIterationsPerDraw = 10;
 
 var spaceshipPoints = [[-20,-20], [-20,20], [25,3], [25,-3]];   //triangular spaceship copied from 2d version
 //rotate x,y
-spaceshipPoints = spaceshipPoints.map( pp => [pp[1],-pp[0]]);
+spaceshipPoints = spaceshipPoints.map( pp => [pp[1]/200,-pp[0]/200]);
 //find point furthest from 0,0 to determine bounding circle size
 var boundingCircleRad = Math.sqrt(Math.max.apply(null,spaceshipPoints.map(x=>x[0]*x[0]+x[1]*x[1])));
 
@@ -123,7 +123,7 @@ function drawSpaceship(cameraQuat, objectQuat, objectColor){
     //TODO? store 3d points so can simply rotate.
     //more efficient solution might be to generate some special rotation/projection matrix, but unnecessary.
     var projected3dpoints = spaceshipPoints.map(pp => {
-        var pp3 = [pp[0],pp[1],200];
+        var pp3 = [pp[0],pp[1],1];
         var length = Math.sqrt(pp3[0]*pp3[0] + pp3[1]*pp3[1] + pp3[2]*pp3[2]);
         return pp3.map(cc => cc/length);
     });
