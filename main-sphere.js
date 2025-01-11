@@ -1,6 +1,6 @@
 var canvas = document.getElementById("myCanvas");
-var canvas_width = 800;
-var canvas_height = 800;
+var canvas_width = 900;
+var canvas_height = 900;
 canvas.width = canvas_width;
 canvas.height = canvas_height;
 var ctx = canvas.getContext("2d");
@@ -10,13 +10,21 @@ var physStepTime = 3;   //phys step every 3 ms.
 var physTimeToCatchUp = 0;
 var maxIterationsPerDraw = 10;
 
+function createShapeData(inputPoints){
+    //rotate x,y
+    var points = inputPoints.map( pp => [pp[1],-pp[0]].map(xx => xx*0.007));
+    //find point furthest from 0,0 to determine bounding circle size
+    var boundingCircleRad = Math.sqrt(Math.max.apply(null,points.map(x=>x[0]*x[0]+x[1]*x[1])));
+    var boundingCircleAngle = Math.atan(boundingCircleRad);
+    return {
+        points,
+        boundingCircleRad,
+        boundingCircleAngle
+    };
+}
 
-var spaceshipPoints = [[-20,-20], [-20,20], [25,3], [25,-3]];   //triangular spaceship copied from 2d version
-//rotate x,y
-spaceshipPoints = spaceshipPoints.map( pp => [pp[1],-pp[0]].map(xx => xx*0.005));
-//find point furthest from 0,0 to determine bounding circle size
-var boundingCircleRad = Math.sqrt(Math.max.apply(null,spaceshipPoints.map(x=>x[0]*x[0]+x[1]*x[1])));
-var criticalBoundingCircleAngle = 2*Math.atan(boundingCircleRad); 
+var spaceshipShape = createShapeData([[-20,-20], [-20,20], [25,3], [25,-3]]);   //triangular spaceship copied from 2d version
+var asteroidShape = createShapeData([[-25,-20], [-20,20], [10,20], [20,0], [20,-20]]);
 
 var globePointsLL = [[-90,0],[90,0]];
 for (var la = -80;la<90;la+=10){
@@ -112,7 +120,7 @@ function drawGlobe(){
     }
 }
 
-function drawSpaceship(cameraQuat, objectQuat, objectColor){
+function drawObjectByPoints(cameraQuat, objectQuat, objectPoints, objectColor){
     ctx.strokeStyle = objectColor;
     ctx.fillStyle = "rgba(0,0,0,0.2)";
     
@@ -123,7 +131,7 @@ function drawSpaceship(cameraQuat, objectQuat, objectColor){
     //take 2d points to be shape projected onto plane (so looks just the same on screen)
     //TODO? store 3d points so can simply rotate.
     //more efficient solution might be to generate some special rotation/projection matrix, but unnecessary.
-    var projected3dpoints = spaceshipPoints.map(pp => {
+    var projected3dpoints = objectPoints.map(pp => {
         var pp3 = [pp[0],pp[1],1];
         var length = Math.sqrt(pp3[0]*pp3[0] + pp3[1]*pp3[1] + pp3[2]*pp3[2]);
         return pp3.map(cc => cc/length);
@@ -313,13 +321,13 @@ function updateAndRender(timestamp){
 
     var angleBetweenPoints = angleBetweenPositionsFromQuats(cameraRotation,otherObjectRotation);
     console.log(angleBetweenPoints);
-    var boundingCircleColor = angleBetweenPoints > criticalBoundingCircleAngle ? "#0af" : "#f00";
+    var boundingCircleColor = angleBetweenPoints > spaceshipShape.boundingCircleAngle+asteroidShape.boundingCircleAngle ? "#0af" : "#f00";
 
-    drawCircle(cameraRotation,cameraRotation,boundingCircleRad,boundingCircleColor);
-    drawCircle(cameraRotation,otherObjectRotation,boundingCircleRad,boundingCircleColor);
+    drawCircle(cameraRotation,cameraRotation,spaceshipShape.boundingCircleRad,boundingCircleColor);
+    drawCircle(cameraRotation,otherObjectRotation,asteroidShape.boundingCircleRad,boundingCircleColor);
 
-    drawSpaceship(cameraRotation,cameraRotation,"#0fa");    //player spaceship
-    drawSpaceship(cameraRotation,otherObjectRotation,"#fa0");
+    drawObjectByPoints(cameraRotation,cameraRotation,spaceshipShape.points,"#0fa");    //player spaceship
+    drawObjectByPoints(cameraRotation,otherObjectRotation,asteroidShape.points,"#fa0");
 }
 
 
