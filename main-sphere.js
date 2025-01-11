@@ -15,16 +15,24 @@ function createShapeData(inputPoints){
     var points = inputPoints.map( pp => [pp[1],-pp[0]].map(xx => xx*0.007));
     //find point furthest from 0,0 to determine bounding circle size
     var boundingCircleRad = Math.sqrt(Math.max.apply(null,points.map(x=>x[0]*x[0]+x[1]*x[1])));
-    var boundingCircleAngle = Math.atan(boundingCircleRad);
     return {
         points,
         boundingCircleRad,
-        boundingCircleAngle
+        boundingCircleAngle: Math.atan(boundingCircleRad)
     };
 }
 
 var spaceshipShape = createShapeData([[-20,-20], [-20,20], [25,3], [25,-3]]);   //triangular spaceship copied from 2d version
 var asteroidShape = createShapeData([[-25,-20], [-20,20], [10,20], [20,0], [20,-20]]);
+
+var playerObject = {
+    shape: spaceshipShape,
+    quat: glMatrix.quat.create()
+}
+var otherObject = {
+    shape: asteroidShape,
+    quat: glMatrix.quat.create()
+}
 
 var globePointsLL = [[-90,0],[90,0]];
 for (var la = -80;la<90;la+=10){
@@ -63,7 +71,7 @@ function drawGlobe(){
     //for current world orientation,
     //render lat, long points
 
-    var cameraMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), cameraRotation);
+    var cameraMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), playerObject.quat);
 
     var transformedPoints = globePoints3d.map( globePoint=> {
         var globePointVec = glMatrix.vec3.create();
@@ -120,18 +128,18 @@ function drawGlobe(){
     }
 }
 
-function drawObjectByPoints(cameraQuat, objectQuat, objectPoints, objectColor){
+function drawObjectByPoints(cameraQuat, objectToDraw, objectColor){
     ctx.strokeStyle = objectColor;
     ctx.fillStyle = "rgba(0,0,0,0.2)";
     
-    var conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(), objectQuat);
+    var conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(), objectToDraw.quat);
     var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), cameraQuat, conjugated);
     var viewMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), relativeQuat);
 
     //take 2d points to be shape projected onto plane (so looks just the same on screen)
     //TODO? store 3d points so can simply rotate.
     //more efficient solution might be to generate some special rotation/projection matrix, but unnecessary.
-    var projected3dpoints = objectPoints.map(pp => {
+    var projected3dpoints = objectToDraw.shape.points.map(pp => {
         var pp3 = [pp[0],pp[1],1];
         var length = Math.sqrt(pp3[0]*pp3[0] + pp3[1]*pp3[1] + pp3[2]*pp3[2]);
         return pp3.map(cc => cc/length);
@@ -168,9 +176,12 @@ function drawObjectByPoints(cameraQuat, objectQuat, objectPoints, objectColor){
     //only if poth +ve pp[2]
 }
 
-function drawCircle(cameraQuat, objectQuat, circleRadius, sphereColor){
+function drawBoundingCircle(cameraQuat, objectToDrawCircleFor, sphereColor){
     //note sphereRadius is circle radius before projection onto sphere towards sphere centre.
     //TODO dedupe code with object drawing
+
+    var objectQuat = objectToDrawCircleFor.quat;
+    var circleRadius = objectToDrawCircleFor.shape.boundingCircleRad;
 
     ctx.strokeStyle = sphereColor;
     ctx.fillStyle = "rgba(0,0,0,0.2)";
@@ -271,11 +282,6 @@ document.addEventListener("keyup", e => {
     }
 });
 
-
-
-var cameraRotation = glMatrix.quat.create(); 
-var otherObjectRotation = glMatrix.quat.create();
-
 //for stepping physics engine.
 currentTime = window.performance.now();
 console.log("initial time = " + currentTime);
@@ -309,8 +315,7 @@ function updateAndRender(timestamp){
         var quatToRotate = glMatrix.quat.fromEuler(glMatrix.quat.create(), -0.1*upness ,0.1*leftness,0.1*spinness);
 
             //note this version of glmatrix is very strange/verbose/confusing. perhaps for performance reasons. TODO wrap to make more readable? use older? write own?
-        glMatrix.quat.multiply(cameraRotation, quatToRotate, cameraRotation);
-        //cameraRotation.multiply(quatToRotate);  //TODO make into OO style?
+        glMatrix.quat.multiply(playerObject.quat, quatToRotate, playerObject.quat);
     }
 
 
@@ -319,20 +324,20 @@ function updateAndRender(timestamp){
 
     drawGlobe();
 
-    var angleBetweenPoints = angleBetweenPositionsFromQuats(cameraRotation,otherObjectRotation);
+    var angleBetweenPoints = angleBetweenPositionsFromQuats(playerObject.quat,otherObject.quat);
     console.log(angleBetweenPoints);
-    var boundingCircleColor = angleBetweenPoints > spaceshipShape.boundingCircleAngle+asteroidShape.boundingCircleAngle ? "#0af" : "#f00";
+    var boundingCircleColor = angleBetweenPoints > playerObject.shape.boundingCircleAngle+otherObject.shape.boundingCircleAngle ? "#0af" : "#f00";
 
-    drawCircle(cameraRotation,cameraRotation,spaceshipShape.boundingCircleRad,boundingCircleColor);
-    drawCircle(cameraRotation,otherObjectRotation,asteroidShape.boundingCircleRad,boundingCircleColor);
+    drawBoundingCircle(playerObject.quat,playerObject,boundingCircleColor);
+    drawBoundingCircle(playerObject.quat,otherObject,boundingCircleColor);
 
-    drawObjectByPoints(cameraRotation,cameraRotation,spaceshipShape.points,"#0fa");    //player spaceship
-    drawObjectByPoints(cameraRotation,otherObjectRotation,asteroidShape.points,"#fa0");
+    drawObjectByPoints(playerObject.quat,playerObject,"#0fa");    //player spaceship
+    drawObjectByPoints(playerObject.quat,otherObject,"#fa0");
 }
 
 
 document.getElementById("dropSpaceshipButton").addEventListener("click", evt => {
-    glMatrix.quat.copy(otherObjectRotation, cameraRotation);
+    glMatrix.quat.copy(otherObject.quat, playerObject.quat);
 });
 
 function angleBetweenPositionsFromQuats(quat_a,quat_b){
