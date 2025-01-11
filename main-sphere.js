@@ -10,15 +10,46 @@ var physStepTime = 3;   //phys step every 3 ms.
 var physTimeToCatchUp = 0;
 var maxIterationsPerDraw = 10;
 
+function glMatVec3from2dPoint(inputVec, zVal){
+    return glMatrix.vec3.fromValues(inputVec[0], inputVec[1], zVal);
+}
+
 function createShapeData(inputPoints){
     //rotate x,y
     var points = inputPoints.map( pp => [pp[1],-pp[0]].map(xx => xx*0.007));
     //find point furthest from 0,0 to determine bounding circle size
     var boundingCircleRad = Math.sqrt(Math.max.apply(null,points.map(x=>x[0]*x[0]+x[1]*x[1])));
+
+    var edgeNormals = [];
+    var previousPoint = glMatVec3from2dPoint(points[points.length-1],1);
+    for (var ii=0;ii<points.length; ii++){
+        var currentPoint = glMatVec3from2dPoint(points[ii], 1);
+
+        var edgeNormalDirection = glMatrix.vec3.cross(glMatrix.vec3.create(), previousPoint, currentPoint);
+        edgeNormals.push(edgeNormalDirection);
+            //NOTE not yet normalised. unnecessary for simple which side of plane testing
+
+        //NOTE this calculation might be done more efficiently using custom maths because know that 
+        //zvals input always zero so some terms may cancel.
+        //partial custom code:
+        /*var difference = [
+            currentPoint[0] - previousPoint[0],
+            currentPoint[1] - previousPoint[1],
+        ];
+        var unprojectedEdgeNormal = [difference[1], -difference[0]];    //TODO normalise?
+        var unprojectedEdgeNormalDotWithPoint = 
+            unprojectedEdgeNormal[0]*currentPoint[0]+
+            unprojectedEdgeNormal[1]*currentPoint[1];
+        */
+        
+        previousPoint = currentPoint;
+    }
+
     return {
         points,
         boundingCircleRad,
-        boundingCircleAngle: Math.atan(boundingCircleRad)
+        boundingCircleAngle: Math.atan(boundingCircleRad),
+        edgeNormals
     };
 }
 
@@ -331,10 +362,12 @@ function updateAndRender(timestamp){
     drawBoundingCircle(playerObject.quat,playerObject,boundingCircleColor);
     drawBoundingCircle(playerObject.quat,otherObject,boundingCircleColor);
 
-    drawObjectByPoints(playerObject.quat,playerObject,"#0fa");    //player spaceship
-    drawObjectByPoints(playerObject.quat,otherObject,"#fa0");
-}
+    var objectsAreOverlappingResult = objectsAreOverlapping(playerObject, otherObject);
+    var objectsDrawColor= objectsAreOverlappingResult? "#f11": "#0fa";
 
+    drawObjectByPoints(playerObject.quat,playerObject,objectsDrawColor);    //player spaceship
+    drawObjectByPoints(playerObject.quat,otherObject,objectsDrawColor);
+}
 
 document.getElementById("dropSpaceshipButton").addEventListener("click", evt => {
     glMatrix.quat.copy(otherObject.quat, playerObject.quat);
@@ -352,4 +385,44 @@ function angleBetweenPositionsFromQuats(quat_a,quat_b){
     var vec_b = glMatrix.vec3.transformQuat(glMatrix.vec3.create(), unrotatedVec, quat_b_conjugated);
 
     return glMatrix.vec3.angle(vec_a, vec_b);
+}
+
+function objectsAreOverlapping(objectA, objectB){
+    return objectHasPointInsideOtherObject(objectA, objectB) || objectHasPointInsideOtherObject(objectB, objectA);
+}
+
+function objectHasPointInsideOtherObject(objectForPoints, otherObject){
+    //get points of objectB in frame of objectA 
+    // each edge of objectA determines a plane through it and sphere origin.
+    // a point of objectB is inside objectB if it is inside all these planes.
+        
+    //calculate relative SO3
+    var conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(), objectForPoints.quat);
+    var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), otherObject.quat, conjugated);
+    var relativeMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), relativeQuat);
+
+    var transformedPoints = objectForPoints.shape.points
+        .map(point => glMatrix.vec3.fromValues(point[0],point[1],1) )  //TODO precalc
+        .map(point => glMatrix.vec3.transformMat3(glMatrix.vec3.create(), point, relativeMat));
+    
+    var pointsInsideResults = transformedPoints.map(pointIsInsideObject);
+
+    return anyArrayElementTrue(pointsInsideResults);
+
+    function pointIsInsideObject(point){
+        if (point[2]<0) {return false;}
+            //because all objects are projected from 2d, restricted to hemisphere.
+            //this is in practice pointless/wasteful check when combined with bounding sphere intersection test
+            //and objects small
+
+        return !anyArrayElementTrue(otherObject.shape.edgeNormals.map(pointOutsideEdgePlane));
+
+        function pointOutsideEdgePlane(norm){
+            return norm[0]*point[0] + norm[1]*point[1] + norm[2]*point[2] > 0;    //dot prod
+        }
+    }
+}
+
+function anyArrayElementTrue(someArray){
+    return someArray.reduce((aggregate, current)=> aggregate || current, false);
 }
