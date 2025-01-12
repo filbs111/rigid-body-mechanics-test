@@ -371,24 +371,13 @@ function updateAndRender(timestamp){
                 //basic1
                 //"local" rotation is still under direct control (button press turns at constant rate)
                 //what seems like "linear" motion of object has momentum. no coupling between "local" rotation and this.
-
-                var localVelocity = playerObject.simpleMechanics.localVelocity;
-                localVelocity[0]+=-0.001*upness;
-                localVelocity[1]-=-0.001*leftness;
-
-                var turnAng = 0.01*spinness;
-                var sinacosa = [Math.sin(turnAng), Math.cos(turnAng)];
-                var quatToRotate = glMatrix.quat.fromEuler(glMatrix.quat.create(), localVelocity[0], localVelocity[1], turnAng*180/Math.PI);
-                
-                var tmp = localVelocity[0]*sinacosa[1] - localVelocity[1]*sinacosa[0];
-                localVelocity[1] = localVelocity[1]*sinacosa[1] + localVelocity[0]*sinacosa[0];
-                localVelocity[0] = tmp;
-                
-                glMatrix.quat.multiply(playerObject.quat, quatToRotate, playerObject.quat);
+                playerObject.simpleMechanics.angVel = 0.01*spinness;
+                updatePhysicsBasic();
                 break;
             case "basic2":
                 //like basic but "local" angular velocity instead of direct rotation. still uncoupled to other rotation ("speed")
-                //TODO
+                playerObject.simpleMechanics.angVel+= 0.0001*spinness;
+                updatePhysicsBasic();
                 break;
             case "proper":
                 //proper physics - basically 3d rotation.
@@ -396,11 +385,21 @@ function updateAndRender(timestamp){
                 break;
         }
 
-        
+        function updatePhysicsBasic(){
+            var localVelocity = playerObject.simpleMechanics.localVelocity;
+            localVelocity[0]+=-0.001*upness;
+            localVelocity[1]-=-0.001*leftness;
 
-        
-
-
+            var turnAng = playerObject.simpleMechanics.angVel;
+            var sinacosa = [Math.sin(turnAng), Math.cos(turnAng)];
+            var quatToRotate = glMatrix.quat.fromEuler(glMatrix.quat.create(), localVelocity[0], localVelocity[1], turnAng*180/Math.PI);
+            
+            var tmp = localVelocity[0]*sinacosa[1] - localVelocity[1]*sinacosa[0];
+            localVelocity[1] = localVelocity[1]*sinacosa[1] + localVelocity[0]*sinacosa[0];
+            localVelocity[0] = tmp;
+            
+            glMatrix.quat.multiply(playerObject.quat, quatToRotate, playerObject.quat);
+        }
     }
 
 
