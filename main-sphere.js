@@ -56,14 +56,24 @@ function createShapeData(inputPoints){
 var spaceshipShape = createShapeData([[-20,-20], [-20,20], [25,3], [25,-3]]);   //triangular spaceship copied from 2d version
 var asteroidShape = createShapeData([[-25,-20], [-20,20], [10,20], [20,0], [20,-20]]);
 
-var playerObject = {
-    shape: spaceshipShape,
-    quat: glMatrix.quat.create()
+function createObject(shape){
+    return {
+        shape,
+        quat: glMatrix.quat.create(),
+        simpleMechanics: {
+            angVel:0,
+            localVelocity:[0,0]
+        },
+        properMechanics: {
+            momentum: [0,0,0],     //(angular momentum) in world frame, conserved
+            invMass: [0.1,0.1,1]   //moment of inertia tensor diag matrix components
+                                    //sum of point masses times distance from origin in each direction, inverted
+        }
+    }
 }
-var otherObject = {
-    shape: asteroidShape,
-    quat: glMatrix.quat.create()
-}
+
+var playerObject = createObject(spaceshipShape);
+var otherObject = createObject(asteroidShape);
 
 var globePointsLL = [[-90,0],[90,0]];
 for (var la = -80;la<90;la+=10){
@@ -343,10 +353,54 @@ function updateAndRender(timestamp){
         var leftness = (currentKeyPresses.left ? 1:0) - (currentKeyPresses.right ? 1:0);
         var spinness = (currentKeyPresses.caretleft ? 1:0) - (currentKeyPresses.caretright ? 1:0);
 
-        var quatToRotate = glMatrix.quat.fromEuler(glMatrix.quat.create(), -0.1*upness ,0.1*leftness,0.1*spinness);
+        var physicsModel = document.getElementById("physicsSelection").value;
 
-            //note this version of glmatrix is very strange/verbose/confusing. perhaps for performance reasons. TODO wrap to make more readable? use older? write own?
-        glMatrix.quat.multiply(playerObject.quat, quatToRotate, playerObject.quat);
+        switch (physicsModel){
+            case "off":
+                //basic no physics, direct object rotation
+                var quatToRotate = glMatrix.quat.fromEuler(glMatrix.quat.create(), -0.1*upness ,0.1*leftness,0.1*spinness);
+
+                //note this version of glmatrix is very strange/verbose/confusing. perhaps for performance reasons. TODO wrap to make more readable? use older? write own?
+                glMatrix.quat.multiply(playerObject.quat, quatToRotate, playerObject.quat);
+                break;
+            case "basic1":
+                //basic physics - works like simple flat space - scalar angular of velocity and local 2d velocity with no coupling
+                // guess equivalent to "proper physics" where object much smaller than world sphere, (and? with equal principal axes - eg square not rectangle)
+                // likely works about same as "proper physics" when there is any damping to object "local" angular velocity (ie not damping to its "speed")
+
+                //basic1
+                //"local" rotation is still under direct control (button press turns at constant rate)
+                //what seems like "linear" motion of object has momentum. no coupling between "local" rotation and this.
+
+                var localVelocity = playerObject.simpleMechanics.localVelocity;
+                localVelocity[0]+=-0.001*upness;
+                localVelocity[1]-=-0.001*leftness;
+
+                var turnAng = 0.01*spinness;
+                var sinacosa = [Math.sin(turnAng), Math.cos(turnAng)];
+                var quatToRotate = glMatrix.quat.fromEuler(glMatrix.quat.create(), localVelocity[0], localVelocity[1], turnAng*180/Math.PI);
+                
+                var tmp = localVelocity[0]*sinacosa[1] - localVelocity[1]*sinacosa[0];
+                localVelocity[1] = localVelocity[1]*sinacosa[1] + localVelocity[0]*sinacosa[0];
+                localVelocity[0] = tmp;
+                
+                glMatrix.quat.multiply(playerObject.quat, quatToRotate, playerObject.quat);
+                break;
+            case "basic2":
+                //like basic but "local" angular velocity instead of direct rotation. still uncoupled to other rotation ("speed")
+                //TODO
+                break;
+            case "proper":
+                //proper physics - basically 3d rotation.
+                //TODO
+                break;
+        }
+
+        
+
+        
+
+
     }
 
 
