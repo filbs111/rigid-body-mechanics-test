@@ -416,6 +416,8 @@ function updateAndRender(timestamp){
                     multiplier,
                     localFrameMomentum);
 
+                updateDisplayedNumber(localAngularVelocity[2]);
+
                 //apply rotation
                 var quatToRotate = glMatrix.quat.fromEuler(glMatrix.quat.create(), 
                     localAngularVelocity[0], localAngularVelocity[1], localAngularVelocity[2]);
@@ -526,4 +528,8 @@ function objectHasPointInsideOtherObject(objectForPoints, otherObject){
 
 function anyArrayElementTrue(someArray){
     return someArray.reduce((aggregate, current)=> aggregate || current, false);
+}
+
+function updateDisplayedNumber(numberToDisplay){
+    document.getElementById("numberdisplay").innerHTML = numberToDisplay;   //TODO do without innerHTML
 }
