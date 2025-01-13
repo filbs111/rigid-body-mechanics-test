@@ -65,7 +65,7 @@ function createObject(shape){
             localVelocity:[0,0]
         },
         properMechanics: {
-            momentum: [0,0,0],     //(angular momentum) in world frame, conserved
+            momentum: glMatrix.vec3.create(),     //(angular momentum) in world frame, conserved
             invMass: [0.1,0.1,1]   //moment of inertia tensor diag matrix components
                                     //sum of point masses times distance from origin in each direction, inverted
         }
@@ -381,7 +381,49 @@ function updateAndRender(timestamp){
                 break;
             case "proper":
                 //proper physics - basically 3d rotation.
-                //TODO
+
+                //angular momentum in world frame is conserved.
+                var relativeMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), playerObject.quat);
+                var relativeMatInverse = glMatrix.mat3.invert(glMatrix.mat3.create(),relativeMat);
+                    //NOTE creating both for rotation back and forth is inefficient, but not sure how to otherwise with lib
+
+                //convert to object frame
+                var localFrameMomentum = glMatrix.vec3.transformMat3(glMatrix.vec3.create(), 
+                    playerObject.properMechanics.momentum, relativeMat);
+
+                //add angular momentum using inputs
+                var momentumToAdd = glMatrix.vec3.fromValues(-0.01*upness ,0.01*leftness,0.005*spinness);
+                glMatrix.vec3.add(localFrameMomentum, localFrameMomentum, momentumToAdd);
+
+                //update world frame angular momentum
+                playerObject.properMechanics.momentum = glMatrix.vec3.transformMat3(
+                    playerObject.properMechanics.momentum,
+                    localFrameMomentum,
+                    relativeMatInverse);
+
+                //convert local angular momentum to local angular velocity
+                //TODO use appropriate moment of inertia
+                //var multiplier = glMatrix.vec3.fromValues(0.1,0.1,1); //guess... this gets something like basic
+                var multiplier = glMatrix.vec3.fromValues(0.05,0.1,1); //this gets tennis raquet effect
+
+                var localAngularVelocity = glMatrix.vec3.multiply(glMatrix.vec3.create(), 
+                    multiplier,
+                    localFrameMomentum);
+
+                //apply rotation
+                var quatToRotate = glMatrix.quat.fromEuler(glMatrix.quat.create(), 
+                    localAngularVelocity[0], localAngularVelocity[1], localAngularVelocity[2]);
+
+                glMatrix.quat.multiply(playerObject.quat, quatToRotate, playerObject.quat);
+
+                console.log({
+                    relativeMat,
+                    relativeMatInverse,
+                    localFrameMomentum,
+                    momentumToAdd,
+                    localAngularVelocity
+                });
+
                 break;
         }
 
