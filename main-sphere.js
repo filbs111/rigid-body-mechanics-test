@@ -405,7 +405,12 @@ function updateAndRender(timestamp){
                 //convert local angular momentum to local angular velocity
                 //TODO use appropriate moment of inertia
                 //var multiplier = glMatrix.vec3.fromValues(0.1,0.1,1); //guess... this gets something like basic
-                var multiplier = glMatrix.vec3.fromValues(0.05,0.1,1); //this gets tennis raquet effect
+                
+                var axisVals = [5,10,100];
+                var multiplier = glMatrix.vec3.fromValues(
+                    1/(axisVals[1]+axisVals[2]),
+                    1/(axisVals[0]+axisVals[2]),
+                    1/(axisVals[0]+axisVals[1])); //this gets tennis raquet effect
 
                 var localAngularVelocity = glMatrix.vec3.multiply(glMatrix.vec3.create(), 
                     multiplier,
