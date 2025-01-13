@@ -171,13 +171,6 @@ function drawGlobe(){
 }
 
 function drawObjectByPoints(cameraQuat, objectToDraw, objectColor){
-    ctx.strokeStyle = objectColor;
-    ctx.fillStyle = "rgba(0,0,0,0.2)";
-    
-    var conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(), objectToDraw.quat);
-    var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), cameraQuat, conjugated);
-    var viewMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), relativeQuat);
-
     //take 2d points to be shape projected onto plane (so looks just the same on screen)
     //TODO? store 3d points so can simply rotate.
     //more efficient solution might be to generate some special rotation/projection matrix, but unnecessary.
@@ -187,50 +180,14 @@ function drawObjectByPoints(cameraQuat, objectToDraw, objectColor){
         return pp3.map(cc => cc/length);
     });
 
-    var rotatedPoints = projected3dpoints.map(pp => 
-        glMatrix.vec3.transformMat3(glMatrix.vec3.create(), pp, viewMat)
-    );
-
-    var pointsOnScreen = rotatedPoints.map(pp => [
-            canvasHalfsize[0]* (1+ pp[0]/(pp[2]*canvasHalfFov[0])),
-            canvasHalfsize[1]* (1+ pp[1]/(pp[2]*canvasHalfFov[1])),
-            pp[2]>0
-        ]
-    );
-
-    ctx.beginPath();
-    var point = pointsOnScreen[pointsOnScreen.length-1];
-    var lastPointPositive = point[2];
-
-    ctx.moveTo(point[0], point[1]);
-    for (var ii=0;ii<pointsOnScreen.length;ii++){
-        point = pointsOnScreen[ii];
-        if (lastPointPositive && point[2]){
-            ctx.lineTo(point[0], point[1]);
-        }else{
-            ctx.moveTo(point[0], point[1]); //assume that lines positive and negative points are outside view
-        }
-        lastPointPositive=point[2];
-    }
-    ctx.stroke();
-    ctx.fill();
-    //TODO don't draw when pp[2] is -ve (maybe should create edge list and check start, end points, draw
-    //only if poth +ve pp[2]
+    drawPolyAtObjPose(cameraQuat, objectToDraw.quat, projected3dpoints, objectColor, "rgba(0,0,0,0.2)");
 }
 
-function drawBoundingCircle(cameraQuat, objectToDrawCircleFor, sphereColor){
+function drawBoundingCircle(cameraQuat, objectToDrawCircleFor, circleColor){
     //note sphereRadius is circle radius before projection onto sphere towards sphere centre.
-    //TODO dedupe code with object drawing
 
     var objectQuat = objectToDrawCircleFor.quat;
     var circleRadius = objectToDrawCircleFor.shape.boundingCircleRad;
-
-    ctx.strokeStyle = sphereColor;
-    ctx.fillStyle = "rgba(0,0,0,0.2)";
-    
-    var conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(), objectQuat);
-    var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), cameraQuat, conjugated);
-    var viewMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), relativeQuat);
 
     var projected3dpoints=[];
     for (var ii=0;ii<32;ii++){
@@ -239,6 +196,18 @@ function drawBoundingCircle(cameraQuat, objectToDrawCircleFor, sphereColor){
         var length = Math.sqrt(pp3[0]*pp3[0] + pp3[1]*pp3[1] + pp3[2]*pp3[2]);
         projected3dpoints.push(pp3.map(cc => cc/length));
     }
+
+    drawPolyAtObjPose(cameraQuat, objectQuat, projected3dpoints, circleColor, "rgba(0,0,0,0.2)");
+}
+
+function drawPolyAtObjPose(cameraQuat, objectQuat, projected3dpoints, strokeStyle, fillStyle){
+
+    ctx.strokeStyle = strokeStyle;
+    ctx.fillStyle = fillStyle;
+
+    var conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(), objectQuat);
+    var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), cameraQuat, conjugated);
+    var viewMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), relativeQuat);
 
     var rotatedPoints = projected3dpoints.map(pp => 
         glMatrix.vec3.transformMat3(glMatrix.vec3.create(), pp, viewMat)
@@ -459,7 +428,7 @@ function updateAndRender(timestamp){
     drawGlobe();
 
     var angleBetweenPoints = angleBetweenPositionsFromQuats(playerObject.quat,otherObject.quat);
-    console.log(angleBetweenPoints);
+    //console.log(angleBetweenPoints);
     var boundingCircleColor = angleBetweenPoints > playerObject.shape.boundingCircleAngle+otherObject.shape.boundingCircleAngle ? "#0af" : "#f00";
 
     drawBoundingCircle(playerObject.quat,playerObject,boundingCircleColor);
