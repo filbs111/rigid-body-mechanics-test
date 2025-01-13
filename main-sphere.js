@@ -16,7 +16,7 @@ function glMatVec3from2dPoint(inputVec, zVal){
 
 function createShapeData(inputPoints){
     //rotate x,y
-    var points = inputPoints.map( pp => [pp[1],-pp[0]].map(xx => xx*0.007));
+    var points = inputPoints.map( pp => [pp[1],-pp[0]].map(xx => xx*0.003));
     //find point furthest from 0,0 to determine bounding circle size
     var boundingCircleRad = Math.sqrt(Math.max.apply(null,points.map(x=>x[0]*x[0]+x[1]*x[1])));
 
@@ -106,7 +106,8 @@ var globePoints3d = globePointsLL.map(ll => {
 });
 
 var canvasHalfsize = [canvas.width/2, canvas.height/2];
-var canvasHalfFov = [2,2];  //centre top of screen is atan(2) from centre
+//var canvasHalfFov = [2,2];  //centre top of screen is atan(2) from centre
+var canvasHalfFov = [1,1];
 
 function drawGlobe(){
     //for current world orientation,
