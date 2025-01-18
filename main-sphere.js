@@ -183,6 +183,35 @@ function drawObjectByPoints(cameraQuat, objectToDraw, objectColor){
     drawPolyAtObjPose(cameraQuat, objectToDraw.quat, projected3dpoints, objectColor, "rgba(0,0,0,0.2)");
 }
 
+function drawObjectSinglePoint(cameraQuat, objectToDraw, pointIndex){
+    var pp = objectToDraw.shape.points[pointIndex];
+    var pp3 = [pp[0],pp[1],1];
+    var length = Math.sqrt(pp3[0]*pp3[0] + pp3[1]*pp3[1] + pp3[2]*pp3[2]);
+    var projected3dpoint = pp3.map(cc => cc/length);
+    
+    //TODO dedupe below code - work out viewmat for obj and reuse for point and edge draw?
+
+    var conjugated = glMatrix.quat.conjugate(glMatrix.quat.create(),  objectToDraw.quat);
+    var relativeQuat = glMatrix.quat.multiply(glMatrix.quat.create(), cameraQuat, conjugated);
+    var viewMat = glMatrix.mat3.fromQuat(glMatrix.mat3.create(), relativeQuat);
+
+    var rotatedPoint = glMatrix.vec3.transformMat3(glMatrix.vec3.create(), projected3dpoint, viewMat);
+
+    var pointOnScreen = [
+            canvasHalfsize[0]* (1+ rotatedPoint[0]/(rotatedPoint[2]*canvasHalfFov[0])),
+            canvasHalfsize[1]* (1+ rotatedPoint[1]/(rotatedPoint[2]*canvasHalfFov[1])),
+            rotatedPoint[2]>0
+        ];
+
+    if (pointOnScreen[2]){
+        ctx.strokeStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(pointOnScreen[0], pointOnScreen[1], 5, 0, 2 * Math.PI);
+        ctx.stroke(); 
+    }
+}
+
+
 function drawBoundingCircle(cameraQuat, objectToDrawCircleFor, circleColor){
     //note sphereRadius is circle radius before projection onto sphere towards sphere centre.
 
@@ -441,6 +470,10 @@ function updateAndRender(timestamp){
 
     drawObjectByPoints(playerObject.quat,playerObject,objectsDrawColor);    //player spaceship
     drawObjectByPoints(playerObject.quat,otherObject,objectsDrawColor);
+
+    if (objectsAreOverlapping){
+        drawObjectSinglePoint(playerObject.quat,overlapTestResult.objectWithPoint,overlapTestResult.pointIndex);
+    }
 }
 
 document.getElementById("dropSpaceshipButton").addEventListener("click", evt => {
@@ -468,7 +501,7 @@ function overlapTest(objectA, objectB){
     updateResultForObjPair(objectB, objectA);
 
     function updateResultForObjPair(objC, objD){
-        var thisResult = leastPenetrationForPointInsideOtherObject(objectA, objectB);
+        var thisResult = leastPenetrationForPointInsideOtherObject(objC, objD);
         if (thisResult.pen > result.pen){
             result.pen = thisResult.pen;
             result.objectWithPoint = objC;
