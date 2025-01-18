@@ -434,8 +434,10 @@ function updateAndRender(timestamp){
     drawBoundingCircle(playerObject.quat,playerObject,boundingCircleColor);
     drawBoundingCircle(playerObject.quat,otherObject,boundingCircleColor);
 
-    var objectsAreOverlappingResult = objectsAreOverlapping(playerObject, otherObject);
-    var objectsDrawColor= objectsAreOverlappingResult? "#f11": "#0fa";
+    var overlapTestResult = overlapTest(playerObject, otherObject);
+
+    var objectsAreOverlapping = overlapTestResult.pen > 0;
+    var objectsDrawColor= objectsAreOverlapping ? "#f11": "#0fa";
 
     drawObjectByPoints(playerObject.quat,playerObject,objectsDrawColor);    //player spaceship
     drawObjectByPoints(playerObject.quat,otherObject,objectsDrawColor);
@@ -459,11 +461,26 @@ function angleBetweenPositionsFromQuats(quat_a,quat_b){
     return glMatrix.vec3.angle(vec_a, vec_b);
 }
 
-function objectsAreOverlapping(objectA, objectB){
-    var result1 = leastPenetrationForPointInsideOtherObject(objectA, objectB);
-    var result2 = leastPenetrationForPointInsideOtherObject(objectB, objectA);
+function overlapTest(objectA, objectB){
 
-    return result1.pen>0 || result2.pen>0;
+    var result = {pen:0};
+    updateResultForObjPair(objectA, objectB);
+    updateResultForObjPair(objectB, objectA);
+
+    function updateResultForObjPair(objC, objD){
+        var thisResult = leastPenetrationForPointInsideOtherObject(objectA, objectB);
+        if (thisResult.pen > result.pen){
+            result.pen = thisResult.pen;
+            result.objectWithPoint = objC;
+            result.objectWithEdge = objD;
+            result.pointIndex = thisResult.pointIndex;
+            result.edgeIndex = thisResult.edgeIndex;
+        }
+    };
+
+    //result can be used to render the point and edge.
+    //the point is point where impulse applied, and impulse direction is the edge normal.
+    return result;
 }
 
 function leastPenetrationForPointInsideOtherObject(objectForPoints, otherObject){
