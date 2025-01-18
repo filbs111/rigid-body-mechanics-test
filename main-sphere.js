@@ -460,10 +460,15 @@ function angleBetweenPositionsFromQuats(quat_a,quat_b){
 }
 
 function objectsAreOverlapping(objectA, objectB){
-    return objectHasPointInsideOtherObject(objectA, objectB) || objectHasPointInsideOtherObject(objectB, objectA);
+    var result1 = leastPenetrationForPointInsideOtherObject(objectA, objectB);
+    var result2 = leastPenetrationForPointInsideOtherObject(objectB, objectA);
+
+    return result1.pen>0 || result2.pen>0;
 }
 
-function objectHasPointInsideOtherObject(objectForPoints, otherObject){
+function leastPenetrationForPointInsideOtherObject(objectForPoints, otherObject){
+    var penetrationResult = {pen:-Number.MAX_VALUE, pointIndex:-1, edgeIndex:-1};
+
     //get points of objectB in frame of objectA 
     // each edge of objectA determines a plane through it and sphere origin.
     // a point of objectB is inside objectB if it is inside all these planes.
@@ -476,22 +481,43 @@ function objectHasPointInsideOtherObject(objectForPoints, otherObject){
     var transformedPoints = objectForPoints.shape.points
         .map(point => glMatrix.vec3.fromValues(point[0],point[1],1) )  //TODO precalc
         .map(point => glMatrix.vec3.transformMat3(glMatrix.vec3.create(), point, relativeMat));
-    
-    var pointsInsideResults = transformedPoints.map(pointIsInsideObject);
 
-    return anyArrayElementTrue(pointsInsideResults);
+    for (var ii=0;ii<transformedPoints.length;ii++){
+        var thisPoint = transformedPoints[ii];
+        var resultForThisPoint = getLeastPenetratedEdgeForPoint(thisPoint);
+        if (resultForThisPoint.pen > penetrationResult.pen){
+            penetrationResult.pen = resultForThisPoint.pen;
+            penetrationResult.pointIndex = ii;
+            penetrationResult.edgeIndex = resultForThisPoint.edgeIndex;
+        }
+    }
 
-    function pointIsInsideObject(point){
-        if (point[2]<0) {return false;}
+    return penetrationResult;
+
+    function getLeastPenetratedEdgeForPoint(point){
+
+        if (point[2]<0) {return {pen:0, edgeIndex:-1}}
             //because all objects are projected from 2d, restricted to hemisphere.
             //this is in practice pointless/wasteful check when combined with bounding sphere intersection test
-            //and objects small
+            //and objects small.
+            //penetration returned is not correct, but because only care about positive penetration, can return 
+            // anything <=0
+            //if cared about -ve penetration result, could just avoid this.
 
-        return !anyArrayElementTrue(otherObject.shape.edgeNormals.map(pointOutsideEdgePlane));
+        var leastPenetrationResult = {pen:Number.MAX_VALUE, edgeIndex:-1};
 
-        function pointOutsideEdgePlane(norm){
-            return norm[0]*point[0] + norm[1]*point[1] + norm[2]*point[2] > 0;    //dot prod
+        var edgeNorms = otherObject.shape.edgeNormals;
+        for (var jj=0;jj<edgeNorms.length;jj++){
+            var norm = edgeNorms[jj];
+            var distanceOutsideEdgePlane = norm[0]*point[0] + norm[1]*point[1] + norm[2]*point[2];
+            var thisPen = -distanceOutsideEdgePlane;
+            if (thisPen < leastPenetrationResult.pen){
+                leastPenetrationResult.pen = thisPen;
+                leastPenetrationResult.edgeIndex = jj;
+            }
         }
+
+        return leastPenetrationResult;
     }
 }
 
